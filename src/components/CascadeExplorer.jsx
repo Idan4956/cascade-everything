@@ -335,7 +335,7 @@ export default function CascadeExplorer({ homedir, accent = 'purple' }) {
           ) : lastSelItems.length > 1 ? (
             <CompareView items={lastSelItems} accent={A} />
           ) : (
-            <CascadeDeepPreview item={previewItem} accent={A} tagMap={tagMap} onToggleTag={toggleTag} tagDefs={tagDefs} />
+            <CascadeDeepPreview item={previewItem} accent={A} tagMap={tagMap} onToggleTag={toggleTag} tagDefs={tagDefs} onAddTag={addTag} />
           )}
 
           <SelectionBar

@@ -1,8 +1,10 @@
 import React from 'react'
 import { FileTile, kindLabel, IconEye, IconShare, IconStar, IconCopy, IconMore, IconPlus } from './icons'
-import { AIActions, TAGS } from './features'
+import { AIActions } from './features'
 
-export default function CascadeDeepPreview({ item, accent, tagMap, onToggleTag }) {
+const HUE_PRESETS = [15, 45, 80, 145, 185, 235, 290, 330]
+
+export default function CascadeDeepPreview({ item, accent, tagMap, onToggleTag, tagDefs = [], onAddTag }) {
   if (!item) return (
     <div style={{
       flex: 1, minWidth: 300, background: 'rgba(255,255,255,0.85)',
@@ -61,36 +63,112 @@ export default function CascadeDeepPreview({ item, accent, tagMap, onToggleTag }
       </div>
 
       {/* Inline tag editor */}
-      <div style={{ padding: '0 18px 14px' }}>
-        <div style={{ fontSize: 10.5, fontWeight: 600, color: '#888', letterSpacing: 0.5, padding: '6px 0 8px', textTransform: 'uppercase' }}>Tags</div>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {TAGS.map(t => {
-            const active = (tagMap?.[item.path] || item.tags || []).includes(t.id)
-            return (
-              <button key={t.id} onClick={() => onToggleTag?.(item.path, t.id)} style={{
-                fontSize: 11, padding: '3px 9px', borderRadius: 99,
-                background: active ? `oklch(0.94 0.05 ${t.hue})` : 'transparent',
-                color: active ? `oklch(0.35 0.14 ${t.hue})` : '#666',
-                border: active ? `1px solid oklch(0.86 0.06 ${t.hue})` : '1px dashed rgba(0,0,0,0.18)',
-                cursor: 'pointer', fontWeight: 500,
-                display: 'flex', alignItems: 'center', gap: 5,
-              }}>
-                <div style={{ width: 6, height: 6, borderRadius: 99, background: `oklch(0.62 0.16 ${t.hue})` }} />
-                {t.name}
-              </button>
-            )
-          })}
-          <button style={{
-            fontSize: 11, padding: '3px 9px', borderRadius: 99, background: 'transparent',
-            color: '#888', border: '1px dashed rgba(0,0,0,0.18)', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: 4,
-          }}>
-            <IconPlus size={9} /> Tag
-          </button>
-        </div>
-      </div>
+      <TagEditor item={item} tagDefs={tagDefs} tagMap={tagMap} onToggleTag={onToggleTag} onAddTag={onAddTag} accent={accent} />
 
       <AIActions item={item} accent={accent} />
+    </div>
+  )
+}
+
+function TagEditor({ item, tagDefs, tagMap, onToggleTag, onAddTag, accent }) {
+  const [addingTag, setAddingTag] = React.useState(false)
+  const [newTagName, setNewTagName] = React.useState('')
+  const [newTagHue, setNewTagHue] = React.useState(235)
+  const activeTags = tagMap?.[item?.path] || item?.tags || []
+
+  const handleAdd = () => {
+    const name = newTagName.trim()
+    if (!name) return
+    onAddTag?.(name, newTagHue)
+    setNewTagName('')
+    setNewTagHue(235)
+    setAddingTag(false)
+  }
+
+  return (
+    <div style={{ padding: '0 18px 14px' }}>
+      <div style={{ fontSize: 10.5, fontWeight: 600, color: '#888', letterSpacing: 0.5, padding: '6px 0 8px', textTransform: 'uppercase' }}>Tags</div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        {tagDefs.map(t => {
+          const active = activeTags.includes(t.id)
+          return (
+            <button key={t.id} onClick={() => onToggleTag?.(item.path, t.id)} style={{
+              fontSize: 11, padding: '3px 9px', borderRadius: 99,
+              background: active ? `oklch(0.94 0.05 ${t.hue})` : 'transparent',
+              color: active ? `oklch(0.35 0.14 ${t.hue})` : '#666',
+              border: active ? `1px solid oklch(0.86 0.06 ${t.hue})` : '1px dashed rgba(0,0,0,0.18)',
+              cursor: 'pointer', fontWeight: 500,
+              display: 'flex', alignItems: 'center', gap: 5,
+            }}>
+              <div style={{ width: 6, height: 6, borderRadius: 99, background: `oklch(0.62 0.16 ${t.hue})` }} />
+              {t.name}
+            </button>
+          )
+        })}
+        <button
+          onClick={() => { setAddingTag(v => !v); setNewTagName(''); setNewTagHue(235) }}
+          style={{
+            fontSize: 11, padding: '3px 9px', borderRadius: 99, background: 'transparent',
+            color: addingTag ? accent?.c : '#888',
+            border: addingTag ? `1px solid ${accent?.c}` : '1px dashed rgba(0,0,0,0.18)',
+            cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 4,
+          }}>
+          <IconPlus size={9} /> New tag
+        </button>
+      </div>
+
+      {addingTag && (
+        <div style={{ marginTop: 8, padding: '8px 10px', background: 'rgba(0,0,0,0.03)', borderRadius: 8 }}>
+          <input
+            autoFocus
+            value={newTagName}
+            onChange={e => setNewTagName(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') setAddingTag(false) }}
+            placeholder="Tag name…"
+            style={{
+              width: '100%', height: 26, padding: '0 8px',
+              border: '1px solid rgba(0,0,0,0.12)', borderRadius: 5,
+              fontSize: 11.5, outline: 'none', background: '#fff',
+              boxSizing: 'border-box',
+            }}
+          />
+          <div style={{ display: 'flex', gap: 5, marginTop: 7, flexWrap: 'wrap' }}>
+            {HUE_PRESETS.map(hue => (
+              <button
+                key={hue}
+                onClick={() => setNewTagHue(hue)}
+                style={{
+                  width: 16, height: 16, borderRadius: 99, border: 'none', cursor: 'pointer',
+                  background: `oklch(0.62 0.16 ${hue})`,
+                  outline: newTagHue === hue ? `2px solid oklch(0.35 0.14 ${hue})` : 'none',
+                  outlineOffset: 1,
+                }}
+              />
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 5, marginTop: 7 }}>
+            <button
+              onClick={handleAdd}
+              style={{
+                flex: 1, height: 24, border: 'none', borderRadius: 5,
+                background: accent?.c || '#6f4cb3', color: '#fff',
+                fontSize: 11, cursor: 'pointer', fontWeight: 600,
+              }}>
+              Add
+            </button>
+            <button
+              onClick={() => setAddingTag(false)}
+              style={{
+                flex: 1, height: 24, border: '1px solid rgba(0,0,0,0.1)', borderRadius: 5,
+                background: 'transparent', color: '#555',
+                fontSize: 11, cursor: 'pointer',
+              }}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
