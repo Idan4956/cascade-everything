@@ -31,20 +31,14 @@
       "out/**"
     ],
     "win": {
-      "target": "zip",
-      "extraFiles": [
-        {
-          "from": "node_modules/electron/dist/ffmpeg.dll",
-          "to": "ffmpeg.dll"
-        }
-      ]
+      "target": "zip"
     },
     "mac": {
       "target": "zip",
       "category": "public.app-category.utilities"
     },
     "linux": {
-      "target": "AppImage",
+      "target": "tar.gz",
       "category": "Utility"
     }
   }

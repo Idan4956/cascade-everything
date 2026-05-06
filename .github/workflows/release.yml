@@ -60,4 +60,4 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         uses: softprops/action-gh-release@v1
         with:
-          files: release/*.AppImage
+          files: release/*.tar.gz
