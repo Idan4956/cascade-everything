@@ -8,7 +8,7 @@ import CommandPalette from './CommandPalette'
 import { CompareView, StackPreview as StackPreviewPanel } from './CompareAndStack'
 import { QuickFilters, SelectionBar, BatchRenameModal, ShortcutsModal, ContextMenu, TAGS as DEFAULT_TAGS } from './features'
 import { FileTile, IconEye, IconCopy, IconRename, IconTag, IconTrash, IconInfo, IconPin, IconWindow } from './icons'
-import { useSidebarSections, useDirectory } from '../hooks/useDirectory'
+import { useSidebarSections, useDirectory, useRoots } from '../hooks/useDirectory'
 
 const ACCENTS = {
   purple: { c: '#6f4cb3', soft: 'rgba(111,76,179,.14)', tint: 'rgba(111,76,179,.06)' },
@@ -126,8 +126,9 @@ export default function CascadeExplorer({ homedir, accent = 'purple' }) {
     }
   }, [])
 
-  // ── Sidebar places ───────────────────────────────────────────
+  // ── Sidebar places + drives ──────────────────────────────────
   const places = useSidebarSections(homedir)
+  const drives = useRoots()
 
   // ── Navigation ──────────────────────────────────────────────
   const navigateTo = React.useCallback((newCascade) => {
@@ -288,6 +289,7 @@ export default function CascadeExplorer({ homedir, accent = 'purple' }) {
           cascade={cascade}
           homedir={homedir}
           places={places}
+          drives={drives}
           onJump={navigateTo}
           accent={A}
           setShowShortcuts={setShowShortcuts}

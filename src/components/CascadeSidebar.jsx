@@ -13,7 +13,7 @@ const SMART_FOLDERS = [
 const HUE_PRESETS = [15, 45, 80, 145, 185, 235, 290, 330]
 
 export default function CascadeSidebar({
-  cascade, homedir, places, onJump, accent, setShowShortcuts, onSmartFolder,
+  cascade, homedir, places, drives = [], onJump, accent, setShowShortcuts, onSmartFolder,
   tagDefs = [], activeTagFilter, onTagFilter, onAddTag, onDeleteTag,
 }) {
   const activePath = cascade[cascade.length - 1]
@@ -59,6 +59,15 @@ export default function CascadeSidebar({
         smartFolder: s,
       })),
     },
+    ...(drives.length > 1 ? [{
+      title: 'Drives',
+      items: drives.map(d => ({
+        id: d,
+        name: d.replace(/\\$/, ''),
+        icon: <span style={{ fontSize: 13 }}>💾</span>,
+        path: [d],
+      })),
+    }] : []),
   ]
 
   return (
@@ -77,7 +86,7 @@ export default function CascadeSidebar({
             {sec.title}
           </div>
           {sec.items.map(it => {
-            const active = activePath === it.id || activePath === it.path?.[0]
+            const active = activePath === it.id || activePath === it.path?.[0] || (it.path?.[0] && activePath?.startsWith(it.path[0]))
             const clickable = it.path || it.smartFolder
             const handleClick = () => {
               if (it.smartFolder) { onSmartFolder(it.smartFolder); if (homedir) onJump([homedir]) }
