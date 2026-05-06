@@ -29,21 +29,22 @@
     "files": [
       "out/**"
     ],
-    "extraFiles": [
-      {
-        "from": "node_modules/electron/dist/ffmpeg.dll",
-        "to": "ffmpeg.dll",
-        "filter": ["**/*"]
-      }
-    ],
     "win": {
-      "target": "zip"
+      "target": "zip",
+      "extraFiles": [
+        {
+          "from": "node_modules/electron/dist/ffmpeg.dll",
+          "to": "ffmpeg.dll"
+        }
+      ]
     },
     "mac": {
-      "target": "dmg"
+      "target": "dmg",
+      "category": "public.app-category.utilities"
     },
     "linux": {
-      "target": "AppImage"
+      "target": "AppImage",
+      "category": "Utility"
     }
   }
 }
