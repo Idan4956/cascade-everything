@@ -246,28 +246,28 @@ export default function CascadeExplorer({ homedir, accent = 'purple' }) {
     }
   }, [])
 
-  const handleDelete = React.useCallback(async () => {
+  const deleteItems = React.useCallback(async (targets) => {
     const api = window.electronAPI
-    if (!api) return
-    const targets = flatMulti.length ? flatMulti : lastSelItems
+    if (!api || !targets.length) return
     const parentDirs = new Set()
     for (const item of targets) {
       await api.trash(item.path)
       const sep = item.path.includes('\\') ? '\\' : '/'
       parentDirs.add(item.path.substring(0, item.path.lastIndexOf(sep)))
     }
-    // Clear cache for affected dirs so columns re-fetch
     parentDirs.forEach(d => clearDirCache(d))
     setMultiSel({})
-    // If the deleted item was open in the cascade, navigate back
     setCascade(prev => {
       const deletedPaths = new Set(targets.map(t => t.path))
       const cut = prev.findIndex(p => deletedPaths.has(p))
       return cut !== -1 ? prev.slice(0, cut) : prev
     })
-    // Force columns to re-render by bumping a refresh key
     setRefreshKey(k => k + 1)
-  }, [flatMulti, lastSelItems])
+  }, [])
+
+  const handleDelete = React.useCallback(() => {
+    deleteItems(flatMulti.length ? flatMulti : lastSelItems)
+  }, [deleteItems, flatMulti, lastSelItems])
 
   // Preview target
   const previewItem = lastIsFile ? lastNode : (lastSelItems.length === 1 ? lastSelItems[0] : null)
@@ -339,6 +339,7 @@ export default function CascadeExplorer({ homedir, accent = 'purple' }) {
               tagMap={tagMap}
               tagDefs={tagDefs}
               activeTagFilter={activeTagFilter}
+              onDelete={(item) => deleteItems([item])}
             />
           ))}
 

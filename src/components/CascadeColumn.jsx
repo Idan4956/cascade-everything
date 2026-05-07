@@ -1,6 +1,6 @@
 import React from 'react'
 import { useDirectory } from '../hooks/useDirectory'
-import { FileTile, IconFilter, IconChevronUp, IconChevronDown, IconChevronRight, IconPin } from './icons'
+import { FileTile, IconFilter, IconChevronUp, IconChevronDown, IconChevronRight, IconPin, IconTrash } from './icons'
 
 export default function CascadeColumn({
   dirPath,
@@ -16,6 +16,7 @@ export default function CascadeColumn({
   extraFilter,
   tagMap,
   tagDefs = [],
+  onDelete,
 }) {
   const { entries, loading, error, refresh } = useDirectory(dirPath)
   const [showFilter, setShowFilter] = React.useState(false)
@@ -23,6 +24,7 @@ export default function CascadeColumn({
   const [creating, setCreating] = React.useState(null) // 'file' | 'folder'
   const [newName, setNewName] = React.useState('')
   const [showNewMenu, setShowNewMenu] = React.useState(false)
+  const [hoveredItem, setHoveredItem] = React.useState(null)
   const newInputRef = React.useRef(null)
 
   React.useEffect(() => {
@@ -167,20 +169,23 @@ export default function CascadeColumn({
           const hasTags = itemTags.length > 0
 
           return (
-            <button
+            <div
               key={item.path}
+              style={{ position: 'relative', display: 'flex', alignItems: 'center' }}
+              onMouseEnter={() => setHoveredItem(item.path)}
+              onMouseLeave={() => setHoveredItem(null)}>
+            <button
               onClick={(e) => onSelect(item, e)}
               onContextMenu={(e) => onContextMenu(e, item)}
               draggable
               style={{
                 width: '100%', display: 'flex', alignItems: 'center', gap: 9,
-                padding: '6px 10px', borderRadius: 5, border: 'none',
-                background: isSel ? (isMulti ? accent.soft : accent.c) : 'transparent',
+                padding: '6px 10px', paddingRight: hoveredItem === item.path ? 28 : 10,
+                borderRadius: 5, border: 'none',
+                background: isSel ? (isMulti ? accent.soft : accent.c) : (hoveredItem === item.path ? 'rgba(0,0,0,0.04)' : 'transparent'),
                 color: isSel && !isMulti ? '#fff' : '#222',
-                cursor: 'pointer', fontSize: 12, textAlign: 'left',
-              }}
-              onMouseEnter={(e) => !isSel && (e.currentTarget.style.background = 'rgba(0,0,0,0.04)')}
-              onMouseLeave={(e) => !isSel && (e.currentTarget.style.background = 'transparent')}>
+                cursor: 'pointer', fontSize: 12, textAlign: 'left', flex: 1,
+              }}>
               <FileTile kind={item.kind} name={item.name} size={18} />
               <span style={{
                 flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -198,6 +203,23 @@ export default function CascadeColumn({
                 <IconChevronRight size={11} color={isSel && !isMulti ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.35)'} />
               )}
             </button>
+            {hoveredItem === item.path && onDelete && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onDelete(item) }}
+                title="Move to Trash"
+                style={{
+                  position: 'absolute', right: 6,
+                  width: 20, height: 20, border: 'none', borderRadius: 4,
+                  background: 'transparent', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#999',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(220,50,50,0.1)'; e.currentTarget.style.color = '#e53e3e' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#999' }}>
+                <IconTrash size={12} />
+              </button>
+            )}
+            </div>
           )
         })}
       </div>
