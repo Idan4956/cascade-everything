@@ -15,6 +15,7 @@ export default function CascadeColumn({
   accent,
   extraFilter,
   tagMap,
+  tagDefs = [],
 }) {
   const { entries, loading, error, refresh } = useDirectory(dirPath)
   const [showFilter, setShowFilter] = React.useState(false)
@@ -188,7 +189,7 @@ export default function CascadeColumn({
                 {item.name}
               </span>
               {hasTags && itemTags.map(t => {
-                const tag = TAGS.find(x => x.id === t)
+                const tag = tagDefs.find(x => x.id === t)
                 return tag && (
                   <div key={t} style={{ width: 6, height: 6, borderRadius: 99, background: `oklch(0.62 0.16 ${tag.hue})`, flex: 'none' }} />
                 )

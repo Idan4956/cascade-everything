@@ -320,6 +320,7 @@ export default function CascadeExplorer({ homedir, accent = 'purple' }) {
               quickFilters={quickFilters}
               showHidden={showHidden}
               tagMap={tagMap}
+              tagDefs={tagDefs}
               activeTagFilter={activeTagFilter}
             />
           ))}
@@ -392,7 +393,7 @@ export default function CascadeExplorer({ homedir, accent = 'purple' }) {
 }
 
 // ── ColumnWithLoader — bridges useDirectory into CascadeColumn ──────────────
-function ColumnWithLoader({ dirPath, onEntries, quickFilters, showHidden, tagMap, activeTagFilter, ...colProps }) {
+function ColumnWithLoader({ dirPath, onEntries, quickFilters, showHidden, tagMap, tagDefs, activeTagFilter, ...colProps }) {
   const { entries } = useDirectory(dirPath)
 
   React.useEffect(() => {
@@ -426,7 +427,7 @@ function ColumnWithLoader({ dirPath, onEntries, quickFilters, showHidden, tagMap
     }
   }, [quickFilters, showHidden, activeTagFilter, tagMap])
 
-  return <CascadeColumn {...colProps} dirPath={dirPath} extraFilter={extraFilter} tagMap={tagMap} />
+  return <CascadeColumn {...colProps} dirPath={dirPath} extraFilter={extraFilter} tagMap={tagMap} tagDefs={tagDefs} />
 }
 
 // ── StackPreviewLoader — loads parent dir, passes siblings to StackPreview ──
