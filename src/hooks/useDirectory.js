@@ -37,6 +37,11 @@ function entryToNode(entry) {
 // Cache for directory listings to avoid redundant reads
 const dirCache = new Map()
 
+export function clearDirCache(dirPath) {
+  if (dirPath) dirCache.delete(dirPath)
+  else dirCache.clear()
+}
+
 export function useDirectory(dirPath) {
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(false)

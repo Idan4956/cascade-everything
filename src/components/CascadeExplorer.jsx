@@ -8,7 +8,7 @@ import CommandPalette from './CommandPalette'
 import { CompareView, StackPreview as StackPreviewPanel } from './CompareAndStack'
 import { QuickFilters, SelectionBar, BatchRenameModal, ShortcutsModal, ContextMenu, TAGS as DEFAULT_TAGS } from './features'
 import { FileTile, IconEye, IconCopy, IconRename, IconTag, IconTrash, IconInfo, IconPin, IconWindow } from './icons'
-import { useSidebarSections, useDirectory, useRoots } from '../hooks/useDirectory'
+import { useSidebarSections, useDirectory, useRoots, clearDirCache } from '../hooks/useDirectory'
 
 const ACCENTS = {
   purple: { c: '#6f4cb3', soft: 'rgba(111,76,179,.14)', tint: 'rgba(111,76,179,.06)' },
@@ -53,6 +53,9 @@ export default function CascadeExplorer({ homedir, accent = 'purple' }) {
   // ── History trail: back stack and forward stack ─────────────
   const [history, setHistory] = React.useState([])
   const [forwardHistory, setForwardHistory] = React.useState([])
+
+  // ── Refresh counter to force column re-mounts after delete ──
+  const [refreshKey, setRefreshKey] = React.useState(0)
 
   // ── nodeMap: cache path → entry metadata ────────────────────
   const [nodeMap, setNodeMap] = React.useState({})
@@ -246,10 +249,24 @@ export default function CascadeExplorer({ homedir, accent = 'purple' }) {
   const handleDelete = React.useCallback(async () => {
     const api = window.electronAPI
     if (!api) return
-    for (const item of flatMulti.length ? flatMulti : lastSelItems) {
+    const targets = flatMulti.length ? flatMulti : lastSelItems
+    const parentDirs = new Set()
+    for (const item of targets) {
       await api.trash(item.path)
+      const sep = item.path.includes('\\') ? '\\' : '/'
+      parentDirs.add(item.path.substring(0, item.path.lastIndexOf(sep)))
     }
+    // Clear cache for affected dirs so columns re-fetch
+    parentDirs.forEach(d => clearDirCache(d))
     setMultiSel({})
+    // If the deleted item was open in the cascade, navigate back
+    setCascade(prev => {
+      const deletedPaths = new Set(targets.map(t => t.path))
+      const cut = prev.findIndex(p => deletedPaths.has(p))
+      return cut !== -1 ? prev.slice(0, cut) : prev
+    })
+    // Force columns to re-render by bumping a refresh key
+    setRefreshKey(k => k + 1)
   }, [flatMulti, lastSelItems])
 
   // Preview target
@@ -305,7 +322,7 @@ export default function CascadeExplorer({ homedir, accent = 'purple' }) {
         <div style={{ flex: 1, display: 'flex', overflow: 'auto', minWidth: 0, scrollSnapType: 'x mandatory', position: 'relative' }}>
           {columnPaths.map((dirPath, depth) => (
             <ColumnWithLoader
-              key={dirPath}
+              key={dirPath + refreshKey}
               dirPath={dirPath}
               selectedPath={cascade[depth + 1] || null}
               multiSel={multiSel[depth + 1] || []}
