@@ -1,9 +1,9 @@
 import React from 'react'
-import { IconBack, IconForward, IconSearch, IconClose, IconMinus, FileTile, IconClock, IconMoon, IconSun } from './icons'
+import { IconBack, IconForward, IconSearch, IconSettings, FileTile, IconClock } from './icons'
 import { useTheme } from '../contexts/ThemeContext'
 
-export default function CascadeHeader({ cascade, nodeMap, setCascade, openPalette, history, canGoBack, canGoForward, onGoBack, onGoForward, stackMode, setStackMode, accent }) {
-  const { T, dark, toggleDark } = useTheme()
+export default function CascadeHeader({ cascade, nodeMap, setCascade, openPalette, history, canGoBack, canGoForward, onGoBack, onGoForward, stackMode, setStackMode, accent, onOpenSettings }) {
+  const { T } = useTheme()
   const [dragOverIdx, setDragOverIdx] = React.useState(null)
 
   return (
@@ -98,10 +98,10 @@ export default function CascadeHeader({ cascade, nodeMap, setCascade, openPalett
           <kbd style={{ fontSize: 10, padding: '2px 6px', background: T.hoverBg, borderRadius: 3, color: T.textDim }}>⌘K</kbd>
         </button>
 
-        {/* Dark mode toggle */}
+        {/* Settings button */}
         <button
-          onClick={toggleDark}
-          title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+          onClick={onOpenSettings}
+          title="Settings (⌘,)"
           style={{
             width: 30, height: 30, border: 'none',
             background: 'transparent', borderRadius: 6,
@@ -111,7 +111,7 @@ export default function CascadeHeader({ cascade, nodeMap, setCascade, openPalett
           }}
           onMouseEnter={e => { e.currentTarget.style.background = T.hoverBg; e.currentTarget.style.color = T.text }}
           onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.textDim }}>
-          {dark ? <IconSun size={14} /> : <IconMoon size={14} />}
+          <IconSettings size={15} />
         </button>
       </div>
 

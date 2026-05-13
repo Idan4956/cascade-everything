@@ -10,6 +10,7 @@ import { QuickFilters, SelectionBar, BatchRenameModal, ShortcutsModal, ContextMe
 import { FileTile, IconEye, IconCopy, IconRename, IconTag, IconTrash, IconInfo, IconPin, IconWindow } from './icons'
 import { useSidebarSections, useDirectory, useRoots, clearDirCache } from '../hooks/useDirectory'
 import { ThemeProvider, useTheme } from '../contexts/ThemeContext'
+import SettingsModal from './SettingsModal'
 
 const ACCENTS = {
   purple: { c: '#6f4cb3', soft: 'rgba(111,76,179,.14)', tint: 'rgba(111,76,179,.06)' },
@@ -26,9 +27,27 @@ export default function CascadeExplorer(props) {
   )
 }
 
-function CascadeExplorerInner({ homedir, accent = 'purple' }) {
+const loadSetting = (key, def) => {
+  try { return JSON.parse(localStorage.getItem(`cascade-${key}`) ?? JSON.stringify(def)) } catch { return def }
+}
+const saveSetting = (key, val) => {
+  try { localStorage.setItem(`cascade-${key}`, JSON.stringify(val)) } catch {}
+}
+
+function CascadeExplorerInner({ homedir, accent: accentProp = 'purple' }) {
   const { T } = useTheme()
-  const A = ACCENTS[accent] || ACCENTS.purple
+
+  // ── Persisted settings ────────────────────────────────────────
+  const [accentKey, setAccentKey] = React.useState(() => loadSetting('accent', accentProp))
+  const [confirmDelete, setConfirmDelete] = React.useState(() => loadSetting('confirmDelete', false))
+  const [startDir, setStartDir] = React.useState(() => loadSetting('startDir', 'home'))
+  const [settingsOpen, setSettingsOpen] = React.useState(false)
+
+  const changeAccent = (key) => { setAccentKey(key); saveSetting('accent', key) }
+  const changeConfirmDelete = (v) => { setConfirmDelete(v); saveSetting('confirmDelete', v) }
+  const changeStartDir = (v) => { setStartDir(v); saveSetting('startDir', v) }
+
+  const A = ACCENTS[accentKey] || ACCENTS.purple
 
   const [cascade, setCascade] = React.useState(homedir ? [homedir] : [])
   React.useEffect(() => {
@@ -39,7 +58,8 @@ function CascadeExplorerInner({ homedir, accent = 'purple' }) {
   const [pinnedCols, setPinnedCols] = React.useState(new Set())
   const [colFilters, setColFilters] = React.useState({})
   const [quickFilters, setQuickFilters] = React.useState({})
-  const [showHidden, setShowHidden] = React.useState(false)
+  const [showHidden, setShowHidden] = React.useState(() => loadSetting('showHidden', false))
+  const changeShowHidden = (v) => { setShowHidden(v); saveSetting('showHidden', v) }
   const [paletteOpen, setPaletteOpen] = React.useState(false)
   const [showShortcuts, setShowShortcuts] = React.useState(false)
   const [showRename, setShowRename] = React.useState(false)
@@ -252,6 +272,11 @@ function CascadeExplorerInner({ homedir, accent = 'purple' }) {
   const deleteItems = React.useCallback(async (targets) => {
     const api = window.electronAPI
     if (!api || !targets.length) return
+    if (confirmDelete) {
+      const names = targets.map(t => t.name).join(', ')
+      const ok = window.confirm(`Move ${targets.length === 1 ? `"${names}"` : `${targets.length} items`} to Trash?`)
+      if (!ok) return
+    }
     const parentDirs = new Set()
     for (const item of targets) {
       await api.trash(item.path)
@@ -267,7 +292,7 @@ function CascadeExplorerInner({ homedir, accent = 'purple' }) {
     })
     setRefreshKey(k => k + 1)
     addToast(`Moved ${targets.length} item${targets.length > 1 ? 's' : ''} to Trash`)
-  }, [addToast])
+  }, [addToast, confirmDelete])
 
   const handleDelete = React.useCallback(() => {
     deleteItems(flatMultiRef.current.length ? flatMultiRef.current : lastSelItemsRef.current)
@@ -305,6 +330,7 @@ function CascadeExplorerInner({ homedir, accent = 'purple' }) {
       if (e.target.tagName === 'INPUT') return
       const meta = e.metaKey || e.ctrlKey
       if (meta && e.key === 'k') { e.preventDefault(); setPaletteOpen(true) }
+      else if (meta && e.key === ',') { e.preventDefault(); setSettingsOpen(true) }
       else if (meta && e.key === '/') { e.preventDefault(); setShowShortcuts(true) }
       else if (e.key === 'F2') { e.preventDefault(); setShowRename(true) }
       else if (e.key === 'Backspace' && (e.metaKey || e.altKey)) { goBack() }
@@ -367,6 +393,7 @@ function CascadeExplorerInner({ homedir, accent = 'purple' }) {
         history={history} canGoBack={history.length > 0} canGoForward={forwardHistory.length > 0}
         onGoBack={goBack} onGoForward={goForward}
         stackMode={stackMode} setStackMode={setStackMode} accent={A}
+        onOpenSettings={() => setSettingsOpen(true)}
       />
 
       <QuickFilters filters={quickFilters} setFilters={setQuickFilters} accent={A} />
@@ -471,7 +498,7 @@ function CascadeExplorerInner({ homedir, accent = 'purple' }) {
       {paletteOpen && (
         <CommandPalette onClose={() => setPaletteOpen(false)} cascade={cascade} setCascade={navigateTo}
           setShowShortcuts={setShowShortcuts} setStackMode={setStackMode} accent={A}
-          loadedDirs={loadedDirs} showHidden={showHidden} onToggleShowHidden={() => setShowHidden(v => !v)} />
+          loadedDirs={loadedDirs} showHidden={showHidden} onToggleShowHidden={() => changeShowHidden(!showHidden)} />
       )}
       {showShortcuts && <ShortcutsModal onClose={() => setShowShortcuts(false)} accent={A} />}
       {showRename && (
@@ -481,6 +508,19 @@ function CascadeExplorerInner({ homedir, accent = 'purple' }) {
       {ctxMenu && (
         <ContextMenu x={ctxMenu.x} y={ctxMenu.y} accent={A} onClose={() => setCtxMenu(null)}
           items={buildContextItems(ctxMenu, { togglePin, setShowRename, setCtxMenu, handleDelete, tagMap, toggleTag, tagDefs })}
+        />
+      )}
+      {settingsOpen && (
+        <SettingsModal
+          onClose={() => setSettingsOpen(false)}
+          accentKey={accentKey}
+          onAccentChange={changeAccent}
+          showHidden={showHidden}
+          onShowHiddenChange={changeShowHidden}
+          confirmDelete={confirmDelete}
+          onConfirmDeleteChange={changeConfirmDelete}
+          startDir={startDir}
+          onStartDirChange={changeStartDir}
         />
       )}
     </div>
