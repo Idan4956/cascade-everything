@@ -7,11 +7,20 @@ import path from 'path'
 import { exec } from 'child_process'
 import { promisify } from 'util'
 import AdmZip from 'adm-zip'
+import Anthropic from '@anthropic-ai/sdk'
 
 const execAsync = promisify(exec)
 let mainWin = null
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
+
+// ── AI key persistence ────────────────────────────────────────────────────────
+let aiApiKey = null
+const aiKeyPath = () => path.join(app.getPath('userData'), 'ai-key.txt')
+
+function loadAiKey() {
+  try { aiApiKey = fs.readFileSync(aiKeyPath(), 'utf-8').trim() } catch { aiApiKey = null }
+}
 
 // ── Tag persistence ───────────────────────────────────────────────────────────
 let tagsCache = {}
@@ -122,6 +131,7 @@ function createWindow() {
 app.whenReady().then(() => {
   loadTags()
   loadStarred()
+  loadAiKey()
   createWindow()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
@@ -448,6 +458,43 @@ ipcMain.handle('app:openTerminal', (_, dirPath) => {
     })
   }
   return { ok: true }
+})
+
+// ── AI / Claude API ────────────────────────────────────────────────────────
+ipcMain.handle('ai:setKey', async (_, key) => {
+  aiApiKey = key.trim()
+  if (aiApiKey) {
+    await fs.promises.writeFile(aiKeyPath(), aiApiKey, 'utf-8')
+  } else {
+    try { await fs.promises.unlink(aiKeyPath()) } catch {}
+  }
+  return { ok: true }
+})
+
+ipcMain.handle('ai:hasKey', () => !!aiApiKey)
+
+ipcMain.handle('ai:query', async (_, { messages, maxTokens = 1024 }) => {
+  if (!aiApiKey) return { error: 'No API key configured. Add one in Settings → AI Features.' }
+  try {
+    const client = new Anthropic({ apiKey: aiApiKey })
+    const response = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: maxTokens,
+      messages,
+    })
+    return { content: response.content[0].text }
+  } catch (e) {
+    return { error: e.message }
+  }
+})
+
+ipcMain.handle('ai:readFileSnippet', async (_, filePath) => {
+  try {
+    const stat = await fs.promises.stat(filePath)
+    if (stat.size > 200 * 1024) return null
+    const text = await fs.promises.readFile(filePath, 'utf-8')
+    return text.slice(0, 4000)
+  } catch { return null }
 })
 
 // ── Helpers ────────────────────────────────────────────────────────────────

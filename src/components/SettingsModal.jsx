@@ -148,6 +148,11 @@ export default function SettingsModal({
             ))}
           </Section>
 
+          {/* ── AI Features ───────────────────────────── */}
+          <Section label="AI Features" T={T}>
+            <AiKeyManager T={T} accentColor={accentColor} />
+          </Section>
+
           {/* ── Updates ───────────────────────────────── */}
           <Section label="Updates" T={T}>
             <UpdateChecker T={T} accentColor={accentColor} />
@@ -287,6 +292,81 @@ function UpdateChecker({ T, accentColor }) {
           style={{ fontSize: 12, color: accentColor, textDecoration: 'none', fontWeight: 500, display: 'inline-block', marginTop: 8 }}>
           Download latest release ↗
         </a>
+      )}
+    </div>
+  )
+}
+
+function AiKeyManager({ T, accentColor }) {
+  const [hasKey, setHasKey] = React.useState(null)
+  const [input, setInput] = React.useState('')
+  const [status, setStatus] = React.useState('')
+
+  React.useEffect(() => {
+    window.electronAPI?.aiHasKey().then(v => setHasKey(!!v))
+  }, [])
+
+  const save = async () => {
+    if (!input.trim()) return
+    setStatus('saving')
+    await window.electronAPI?.aiSetKey(input.trim())
+    setHasKey(true)
+    setInput('')
+    setStatus('saved')
+    setTimeout(() => setStatus(''), 2000)
+  }
+
+  const clear = async () => {
+    await window.electronAPI?.aiSetKey('')
+    setHasKey(false)
+    setStatus('')
+  }
+
+  return (
+    <div style={{ padding: '12px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ fontSize: 12.5, color: T.textSub, lineHeight: 1.5 }}>
+        Add a Claude API key to enable Smart Actions: document summaries, auto-tag suggestions, smart renames, and natural language search. Keys are stored locally and never sent anywhere except the Claude API.
+      </div>
+      <a href="https://console.anthropic.com/account/keys" target="_blank" rel="noreferrer"
+        style={{ fontSize: 12, color: accentColor, textDecoration: 'none', fontWeight: 500 }}>
+        Get an API key from console.anthropic.com ↗
+      </a>
+      {hasKey ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ fontSize: 12.5, color: '#3fa45a', fontWeight: 500, flex: 1 }}>
+            ✓ API key configured
+          </div>
+          <button onClick={clear} style={{
+            height: 28, padding: '0 13px', border: `1px solid ${T.borderMid}`,
+            borderRadius: 4, fontSize: 12, cursor: 'pointer',
+            background: 'transparent', color: T.textMid,
+          }}>
+            Remove key
+          </button>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input
+            type="password"
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && save()}
+            placeholder="sk-ant-…"
+            style={{
+              flex: 1, height: 32, padding: '0 10px',
+              border: `1px solid ${T.borderMid}`, borderRadius: 4,
+              background: T.inputBg, color: T.text, fontSize: 12.5,
+              outline: 'none',
+            }}
+          />
+          <button onClick={save} disabled={!input.trim() || status === 'saving'} style={{
+            height: 32, padding: '0 16px', background: accentColor, color: '#fff',
+            border: 'none', borderRadius: 4, fontSize: 12, fontWeight: 500,
+            cursor: input.trim() ? 'pointer' : 'default', opacity: input.trim() ? 1 : 0.5, flexShrink: 0,
+          }}>
+            {status === 'saving' ? 'Saving…' : status === 'saved' ? 'Saved!' : 'Save key'}
+          </button>
+        </div>
       )}
     </div>
   )

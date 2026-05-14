@@ -363,57 +363,114 @@ export function ShortcutsModal({ onClose, accent }) {
 }
 
 // ─────────── AI quick actions strip ───────────
+const AI_PROMPTS = {
+  'Summarize document': (name, content) =>
+    `Summarize this document in 3-5 bullet points. File: "${name}"\n\nContent:\n${content || '(binary or unreadable)'}`,
+  'Pull key facts': (name, content) =>
+    `Extract 3-5 key facts or data points from this file. File: "${name}"\n\nContent:\n${content || '(binary or unreadable)'}`,
+  'Folder report': (name, content) =>
+    `This is a folder named "${name}" containing these files:\n${content}\n\nGive a brief 2-3 sentence summary of what this folder contains and its purpose.`,
+  'Find similar photos': (name) =>
+    `Suggest 3 search terms I could use to find photos similar to "${name}" based on the filename alone.`,
+  'Auto-tag genre': (name) =>
+    `Based on the filename "${name}", suggest 2-3 genre or category tags for this audio file.`,
+  'Open with AI': (name, content) =>
+    `Describe what this file likely contains and suggest 2-3 things I could do with it. File: "${name}"\n\nContent preview:\n${content || '(binary or unreadable)'}`,
+}
+
 export function AIActions({ item, accent }) {
   const { T } = useTheme()
+  const [loading, setLoading] = React.useState(null)
+  const [result, setResult] = React.useState(null)
+  const [hasKey, setHasKey] = React.useState(null)
+
+  React.useEffect(() => {
+    window.electronAPI?.aiHasKey().then(v => setHasKey(!!v))
+  }, [item?.path])
+
   if (!item) return null
+
   const actions = (() => {
     if (item.kind === 'image') return [
       { icon: '✨', label: 'Find similar photos' },
-      { icon: '🎨', label: 'Extract palette' },
-      { icon: '📍', label: 'Where was this taken?' },
     ]
     if (item.kind === 'pdf' || item.kind === 'doc') return [
       { icon: '✨', label: 'Summarize document' },
       { icon: '🔎', label: 'Pull key facts' },
-      { icon: '🌐', label: 'Translate to…' },
-    ]
-    if (item.kind === 'video') return [
-      { icon: '✨', label: 'Generate chapters' },
-      { icon: '📝', label: 'Transcribe audio' },
-      { icon: '🖼', label: 'Pick a thumbnail' },
     ]
     if (item.kind === 'audio') return [
-      { icon: '📝', label: 'Transcribe' },
       { icon: '🏷', label: 'Auto-tag genre' },
     ]
     if (item.kind === 'folder') return [
-      { icon: '✨', label: 'Tidy up duplicates' },
       { icon: '📊', label: 'Folder report' },
     ]
     return [{ icon: '✨', label: 'Open with AI' }]
   })()
+
+  const run = async (label) => {
+    const api = window.electronAPI
+    if (!api) return
+    setLoading(label)
+    setResult(null)
+    let content = null
+    if (item.kind !== 'image' && item.kind !== 'video' && item.kind !== 'audio' && item.kind !== 'folder') {
+      content = await api.aiReadFileSnippet(item.path)
+    } else if (item.kind === 'folder') {
+      const entries = await api.readDir(item.path).catch(() => [])
+      content = entries.slice(0, 40).map(e => e.name).join(', ')
+    }
+    const promptFn = AI_PROMPTS[label] || AI_PROMPTS['Open with AI']
+    const res = await api.aiQuery({
+      messages: [{ role: 'user', content: promptFn(item.name, content) }],
+      maxTokens: 512,
+    })
+    setLoading(null)
+    setResult({ label, text: res.error ? `Error: ${res.error}` : res.content })
+  }
+
   return (
     <div style={{ padding: '10px 14px 12px', borderTop: `1px solid ${T.border}` }}>
-      <div style={{ fontSize: 10.5, fontWeight: 600, color: '#888', letterSpacing: 0.5, padding: '4px 0 8px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div style={{ fontSize: 10.5, fontWeight: 600, letterSpacing: 0.5, padding: '4px 0 8px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 6 }}>
         <span style={{ background: `linear-gradient(135deg, ${accent.c}, oklch(0.65 0.18 280))`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: 700 }}>✨ Smart actions</span>
+        {hasKey === false && (
+          <span style={{ fontSize: 10, color: T.textFaint, fontWeight: 400, textTransform: 'none' }}>— add API key in Settings</span>
+        )}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         {actions.map((a, i) => (
           <button key={i}
-            onClick={() => alert(`"${a.label}" requires an AI backend.\n\nTo enable Smart Actions, connect an API key in settings.`)}
+            onClick={() => hasKey ? run(a.label) : null}
             style={{
               display: 'flex', alignItems: 'center', gap: 9, padding: '7px 10px', border: `1px solid ${T.border}`,
-              background: T.hoverBg, borderRadius: 6, cursor: 'pointer', fontSize: 12,
-              color: '#222', textAlign: 'left',
+              background: loading === a.label ? accent.soft : T.hoverBg,
+              borderRadius: 6, cursor: hasKey ? 'pointer' : 'default',
+              fontSize: 12, color: T.text, textAlign: 'left',
+              opacity: hasKey === false ? 0.5 : 1,
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = accent.soft; e.currentTarget.style.borderColor = `${accent.c}33` }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = T.hoverBg; e.currentTarget.style.borderColor = T.border }}>
-            <span style={{ width: 16, textAlign: 'center' }}>{a.icon}</span>
-            <span style={{ flex: 1 }}>{a.label}</span>
-            <IconChevronRight size={11} color="#aaa" />
+            onMouseEnter={(e) => { if (hasKey) { e.currentTarget.style.background = accent.soft; e.currentTarget.style.borderColor = `${accent.c}33` } }}
+            onMouseLeave={(e) => { if (loading !== a.label) { e.currentTarget.style.background = T.hoverBg; e.currentTarget.style.borderColor = T.border } }}>
+            <span style={{ width: 16, textAlign: 'center' }}>{loading === a.label ? '⏳' : a.icon}</span>
+            <span style={{ flex: 1 }}>{loading === a.label ? 'Thinking…' : a.label}</span>
+            {loading !== a.label && <IconChevronRight size={11} color={T.textFaint} />}
           </button>
         ))}
       </div>
+      {result && (
+        <div style={{
+          marginTop: 8, padding: '10px 12px',
+          background: accent.soft, borderRadius: 6,
+          border: `1px solid ${accent.c}33`,
+          fontSize: 12, color: T.text, lineHeight: 1.6,
+          whiteSpace: 'pre-wrap',
+        }}>
+          <div style={{ fontSize: 10.5, fontWeight: 600, color: accent.c, marginBottom: 5 }}>{result.label}</div>
+          {result.text}
+          <button onClick={() => setResult(null)} style={{
+            display: 'block', marginTop: 6, fontSize: 10.5,
+            color: T.textFaint, background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+          }}>Dismiss</button>
+        </div>
+      )}
     </div>
   )
 }

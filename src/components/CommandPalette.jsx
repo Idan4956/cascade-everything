@@ -7,6 +7,13 @@ export default function CommandPalette({ onClose, cascade, setCascade, setShowSh
   const [q, setQ] = React.useState('')
   const inputRef = React.useRef(null)
   const [kbIdx, setKbIdx] = React.useState(0)
+  const [aiLoading, setAiLoading] = React.useState(false)
+  const [aiResult, setAiResult] = React.useState(null)
+  const [hasAiKey, setHasAiKey] = React.useState(false)
+
+  React.useEffect(() => {
+    window.electronAPI?.aiHasKey().then(v => setHasAiKey(!!v))
+  }, [])
 
   React.useEffect(() => {
     inputRef.current?.focus()
@@ -79,6 +86,34 @@ export default function CommandPalette({ onClose, cascade, setCascade, setShowSh
     onClose()
   }
 
+  const isNaturalLanguage = q.trim().split(/\s+/).length >= 3
+
+  const runAiSearch = async () => {
+    const api = window.electronAPI
+    if (!api) return
+    setAiLoading(true)
+    setAiResult(null)
+    const fileNames = Object.values(loadedDirs).flat().map(e => e.name).slice(0, 80).join(', ')
+    const res = await api.aiQuery({
+      messages: [{
+        role: 'user',
+        content: `You are a file search assistant. The user wants to find files matching: "${q}"\n\nFiles available (sample): ${fileNames || 'none loaded yet'}\n\nRespond ONLY with a JSON object (no explanation) with these optional fields:\n- "search": string to match in filenames\n- "kind": one of "image", "video", "doc", "pdf", "audio", "code", "folder"\n- "note": one sentence explaining what you're searching for\n\nExample: {"search": "invoice", "kind": "pdf", "note": "Looking for PDF invoice files"}`,
+      }],
+      maxTokens: 200,
+    })
+    setAiLoading(false)
+    if (res.error) { setAiResult({ error: res.error }); return }
+    try {
+      const json = JSON.parse(res.content.match(/\{[\s\S]*\}/)?.[0] || '{}')
+      setAiResult(json)
+      if (json.search) {
+        setQ(json.search)
+      }
+    } catch {
+      setAiResult({ error: 'Could not parse AI response' })
+    }
+  }
+
   const handleKeyDown = (e) => {
     if (e.key === 'ArrowDown') { e.preventDefault(); setKbIdx(i => Math.min(i + 1, allRows.length - 1)) }
     else if (e.key === 'ArrowUp') { e.preventDefault(); setKbIdx(i => Math.max(i - 1, 0)) }
@@ -106,9 +141,20 @@ export default function CommandPalette({ onClose, cascade, setCascade, setShowSh
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', borderBottom: `1px solid ${T.border}` }}>
           <IconSearch size={16} color={T.textDim} />
-          <input ref={inputRef} value={q} onChange={(e) => setQ(e.target.value)}
-            placeholder="Search files, run commands…"
+          <input ref={inputRef} value={q} onChange={(e) => { setQ(e.target.value); setAiResult(null) }}
+            onKeyDown={(e) => { if (e.key === 'Enter' && isNaturalLanguage && hasAiKey && matched.length === 0) { e.preventDefault(); runAiSearch() } }}
+            placeholder="Search files, or ask in plain English…"
             style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: 15, color: T.text }} />
+          {hasAiKey && isNaturalLanguage && (
+            <button onClick={runAiSearch} disabled={aiLoading} style={{
+              height: 26, padding: '0 10px', border: 'none',
+              background: aiLoading ? accent.soft : accent.c,
+              color: '#fff', borderRadius: 5, fontSize: 11.5, fontWeight: 600,
+              cursor: aiLoading ? 'default' : 'pointer', flexShrink: 0,
+            }}>
+              {aiLoading ? '…' : '✨ Ask AI'}
+            </button>
+          )}
           <kbd style={{ fontSize: 10, padding: '3px 7px', background: T.hoverBg, borderRadius: 4, color: T.textSub }}>ESC</kbd>
         </div>
 
@@ -137,9 +183,29 @@ export default function CommandPalette({ onClose, cascade, setCascade, setShowSh
             </PaletteSection>
           )}
 
-          {ql && matched.length === 0 && cmdMatched.length === 0 && (
-            <div style={{ padding: 32, textAlign: 'center', color: T.textDim, fontSize: 13 }}>
-              No matches for "{q}"
+          {aiResult && !aiResult.error && (
+            <div style={{ margin: '4px 6px', padding: '10px 14px', background: accent.soft, borderRadius: 8, border: `1px solid ${accent.c}33` }}>
+              <div style={{ fontSize: 10.5, fontWeight: 700, color: accent.c, marginBottom: 4 }}>✨ AI interpreted your search</div>
+              {aiResult.note && <div style={{ fontSize: 12, color: T.text }}>{aiResult.note}</div>}
+              {aiResult.search && <div style={{ fontSize: 11.5, color: T.textSub, marginTop: 3 }}>Searching for: <strong>"{aiResult.search}"</strong></div>}
+            </div>
+          )}
+          {aiResult?.error && (
+            <div style={{ margin: '4px 6px', padding: '10px 14px', background: '#c83a2e22', borderRadius: 8, border: '1px solid #c83a2e44', fontSize: 12, color: '#c83a2e' }}>
+              {aiResult.error}
+            </div>
+          )}
+          {ql && matched.length === 0 && cmdMatched.length === 0 && !aiResult && (
+            <div style={{ padding: '24px 32px', textAlign: 'center', color: T.textDim, fontSize: 13 }}>
+              <div>No matches for "{q}"</div>
+              {hasAiKey && isNaturalLanguage && (
+                <button onClick={runAiSearch} style={{
+                  marginTop: 10, padding: '6px 16px', background: accent.c, color: '#fff',
+                  border: 'none', borderRadius: 6, fontSize: 12, cursor: 'pointer', fontWeight: 500,
+                }}>
+                  ✨ Search with AI
+                </button>
+              )}
             </div>
           )}
         </div>

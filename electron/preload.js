@@ -35,6 +35,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   diskUsage: () => ipcRenderer.invoke('fs:diskUsage'),
   search: (query, rootDir, maxDepth) => ipcRenderer.invoke('fs:search', query, rootDir, maxDepth),
 
+  // AI / Claude
+  aiSetKey: (key) => ipcRenderer.invoke('ai:setKey', key),
+  aiHasKey: () => ipcRenderer.invoke('ai:hasKey'),
+  aiQuery: (opts) => ipcRenderer.invoke('ai:query', opts),
+  aiReadFileSnippet: (filePath) => ipcRenderer.invoke('ai:readFileSnippet', filePath),
+
   // Window controls
   minimize: () => ipcRenderer.send('window:minimize'),
   maximize: () => ipcRenderer.send('window:maximize'),
