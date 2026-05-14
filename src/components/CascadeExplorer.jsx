@@ -75,16 +75,13 @@ function CascadeExplorerInner({ homedir, accent: accentProp = 'blue' }) {
   }, [activeTabId, cascade, history, forwardHistory, tabs])
 
   const newTab = React.useCallback(() => {
-    setTabs(prev => { const t = makeTab(homedir ? [homedir] : []); return [...prev, t] })
-    setTabs(prev => {
-      const last = prev[prev.length - 1]
-      setActiveTabId(last.id)
-      _setCascade(last.cascade)
-      setHistory([])
-      setForwardHistory([])
-      setMultiSel({})
-      return prev
-    })
+    const t = makeTab(homedir ? [homedir] : [])
+    setTabs(prev => [...prev, t])
+    setActiveTabId(t.id)
+    _setCascade(t.cascade)
+    setHistory([])
+    setForwardHistory([])
+    setMultiSel({})
   }, [homedir])
 
   const closeTab = React.useCallback((id) => {
@@ -116,11 +113,6 @@ function CascadeExplorerInner({ homedir, accent: accentProp = 'blue' }) {
   const [rightHistory, setRightHistory] = React.useState([])
   const [rightForwardHistory, setRightForwardHistory] = React.useState([])
   const [activePane, setActivePane] = React.useState('left')
-
-  const setCascade = React.useCallback((c) => {
-    if (activePane === 'right') setRightCascade(c)
-    else _setCascade(c)
-  }, [activePane])
 
   // ── Quick Look ────────────────────────────────────────────────────
   const [quickLookItem, setQuickLookItem] = React.useState(null)
@@ -243,7 +235,7 @@ function CascadeExplorerInner({ homedir, accent: accentProp = 'blue' }) {
   const drives = useRoots()
 
   const navigateTo = React.useCallback((newCascade) => {
-    setCascade(prev => {
+    _setCascade(prev => {
       setHistory(h => {
         const last = h[h.length - 1]
         if (last && last.join('|') === newCascade.join('|')) return h
@@ -258,7 +250,7 @@ function CascadeExplorerInner({ homedir, accent: accentProp = 'blue' }) {
     setHistory(h => {
       if (h.length === 0) return h
       const prev = h[h.length - 1]
-      setCascade(cur => { setForwardHistory(f => [...f.slice(-9), cur]); return prev })
+      _setCascade(cur => { setForwardHistory(f => [...f.slice(-9), cur]); return prev })
       return h.slice(0, -1)
     })
   }, [])
@@ -267,7 +259,7 @@ function CascadeExplorerInner({ homedir, accent: accentProp = 'blue' }) {
     setForwardHistory(f => {
       if (f.length === 0) return f
       const next = f[f.length - 1]
-      setCascade(cur => { setHistory(h => [...h.slice(-9), cur]); return next })
+      _setCascade(cur => { setHistory(h => [...h.slice(-9), cur]); return next })
       return f.slice(0, -1)
     })
   }, [])
@@ -315,7 +307,7 @@ function CascadeExplorerInner({ homedir, accent: accentProp = 'blue' }) {
     const result = await api.rename(item.path, newPath)
     if (!result?.error) {
       clearDirCache(dir)
-      setCascade(prev => prev.map(p => p === item.path ? newPath : p))
+      _setCascade(prev => prev.map(p => p === item.path ? newPath : p))
       setRefreshKey(k => k + 1)
       addToast(`Renamed to "${newName}"`)
     } else {
@@ -351,7 +343,7 @@ function CascadeExplorerInner({ homedir, accent: accentProp = 'blue' }) {
     if (!result?.error) {
       clearDirCache(srcDir)
       clearDirCache(destDirPath)
-      setCascade(prev => prev.map(p => p === srcPath ? destPath : p))
+      _setCascade(prev => prev.map(p => p === srcPath ? destPath : p))
       setRefreshKey(k => k + 1)
       addToast(`Moved "${name}"`)
     } else {
@@ -375,7 +367,7 @@ function CascadeExplorerInner({ homedir, accent: accentProp = 'blue' }) {
     }
     parentDirs.forEach(d => clearDirCache(d))
     setMultiSel({})
-    setCascade(prev => {
+    _setCascade(prev => {
       const deletedPaths = new Set(targets.map(t => t.path))
       const cut = prev.findIndex(p => deletedPaths.has(p))
       return cut !== -1 ? prev.slice(0, cut) : prev
@@ -545,7 +537,7 @@ function CascadeExplorerInner({ homedir, accent: accentProp = 'blue' }) {
               outline: dualPane && activePane === 'left' ? `2px solid ${A.c}44` : 'none',
               outlineOffset: -2,
             }}>
-            <PaneColumns cascade={cascade} selectAt={selectAt} onCtx={onCtx} {...colProps} />
+            <PaneColumns cascade={columnPaths} selectAt={selectAt} onCtx={onCtx} {...colProps} />
             {!dualPane && (
               stackMode && parentPath ? (
                 <StackPreviewLoader parentPath={parentPath} selectedPath={lastPath}
@@ -666,9 +658,7 @@ function CascadeExplorerInner({ homedir, accent: accentProp = 'blue' }) {
 }
 
 function PaneColumns({ cascade, selectAt, onCtx, refreshKey, multiSel, colFilters, setColFilters, pinnedCols, onEntries, accent, tagMap, tagDefs, activeTagFilter, cutPaths, starredPaths, starFilter, gitInfo, onDelete, onRename, onCopy, onMove, onToggleStar, quickFilters, showHidden }) {
-  const lastPath = cascade[cascade.length - 1]
-  const columnPaths = cascade
-  return columnPaths.map((dirPath, depth) => (
+  return cascade.map((dirPath, depth) => (
     <ColumnWithLoader
       key={dirPath + refreshKey}
       dirPath={dirPath}
