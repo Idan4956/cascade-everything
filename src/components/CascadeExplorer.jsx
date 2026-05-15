@@ -160,9 +160,7 @@ function CascadeExplorerInner({ homedir, accent: accentProp = 'blue' }) {
     api.getTagDefs().then(d => { if (d) setTagDefs(d) })
     api.getStarred().then(paths => { if (paths) setStarredPaths(new Set(paths)) })
     api.getRecentFolders?.().then(r => { if (r) setRecentFolders(r) })
-    const cleanup = api.onOpenPath?.(p => navigateTo([p]))
-    return cleanup
-  }, [navigateTo])
+  }, [])
 
   const toggleStar = React.useCallback(async (filePath) => {
     const api = window.electronAPI
@@ -254,6 +252,10 @@ function CascadeExplorerInner({ homedir, accent: accentProp = 'blue' }) {
         .then(updated => { if (updated) setRecentFolders(updated) })
     }
   }, [])
+
+  React.useEffect(() => {
+    return window.electronAPI?.onOpenPath?.(p => navigateTo([p]))
+  }, [navigateTo])
 
   const goBack = React.useCallback(() => {
     setHistory(h => {
