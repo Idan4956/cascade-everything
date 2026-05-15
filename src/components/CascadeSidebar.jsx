@@ -89,8 +89,10 @@ export default function CascadeSidebar({
       width: 188,
       padding: '12px 6px 0',
       display: 'flex', flexDirection: 'column', gap: 2,
-      background: T.sidebarBg,
-      borderRight: `1px solid ${T.border}`,
+      background: T.glassSidebarBg,
+      backdropFilter: T.glassBlur,
+      WebkitBackdropFilter: T.glassBlur,
+      borderRight: `1px solid ${T.glassBorder}`,
       overflow: 'auto',
       flexShrink: 0,
     }}>

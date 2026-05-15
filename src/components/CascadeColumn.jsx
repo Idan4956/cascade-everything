@@ -130,8 +130,8 @@ export default function CascadeColumn({
   }
 
   const pinnedBg = T.dark
-    ? `linear-gradient(180deg, ${accent.tint}, ${T.columnBg})`
-    : `linear-gradient(180deg, ${accent.tint}, rgba(255,255,255,0.55))`
+    ? `linear-gradient(180deg, rgba(${accent.rgb},0.13), ${T.glassBg})`
+    : `linear-gradient(180deg, rgba(${accent.rgb},0.09), ${T.glassBg})`
 
   return (
     <div
@@ -140,19 +140,24 @@ export default function CascadeColumn({
       onBlur={() => setKbIdx(-1)}
       style={{
         width: 240, minWidth: 240, maxWidth: 240,
-        borderRight: `1px solid ${T.border}`,
-        background: isPinned ? pinnedBg : T.columnBg,
+        borderRight: `1px solid ${T.glassBorder}`,
+        background: isPinned ? pinnedBg : T.glassBg,
+        backdropFilter: T.glassBlur,
+        WebkitBackdropFilter: T.glassBlur,
         display: 'flex', flexDirection: 'column', minHeight: 0,
         scrollSnapAlign: 'start', flexShrink: 0,
         outline: 'none',
+        boxShadow: T.dark ? '2px 0 12px rgba(0,0,0,0.18)' : '2px 0 8px rgba(0,0,0,0.04)',
       }}>
 
       {/* Column header */}
       <div style={{
-        padding: '0 8px 0 12px', height: 28,
+        padding: '0 8px 0 12px', height: 30,
         display: 'flex', alignItems: 'center', gap: 4,
-        fontSize: 10.5, color: T.textDim, borderBottom: `1px solid ${T.border}`,
-        fontWeight: 600, letterSpacing: 0.4, textTransform: 'uppercase', flexShrink: 0,
+        fontSize: 9.5, color: T.textDim,
+        borderBottom: `1px solid ${T.glassBorder}`,
+        background: T.dark ? 'rgba(0,0,0,0.18)' : 'rgba(0,0,0,0.028)',
+        fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', flexShrink: 0,
       }}>
         <span style={{ flex: 1 }}>
           {loading ? '…' : error ? '!' : `${filtered.length} of ${entries.length}`}
@@ -212,8 +217,8 @@ export default function CascadeColumn({
       <div
         style={{
           flex: 1, overflow: 'auto', padding: 4,
-          background: isDragOver ? (T.dark ? 'rgba(111,76,179,0.08)' : 'rgba(111,76,179,0.04)') : undefined,
-          transition: 'background 0.1s',
+          background: isDragOver ? `rgba(${accent.rgb},0.07)` : undefined,
+          transition: 'background 0.12s',
         }}
         onClick={() => setShowNewMenu(false)}
         onDragOver={(e) => {
@@ -251,7 +256,7 @@ export default function CascadeColumn({
               const isSel = selectedPath === item.path || multiSel.includes(item.path)
               const isCut = cutPaths?.has(item.path)
               const isStarred = starredPaths?.has(item.path)
-              const selBg = isSel ? accent.c : 'transparent'
+              const selBg = isSel ? `rgba(${accent.rgb}, ${T.dark ? '0.24' : '0.16'})` : 'transparent'
               return (
                 <button
                   key={item.path}
@@ -262,13 +267,16 @@ export default function CascadeColumn({
                     width: 72, minHeight: 74, flexShrink: 0,
                     display: 'flex', flexDirection: 'column', alignItems: 'center',
                     justifyContent: 'flex-start', gap: 4, padding: '8px 4px 6px',
-                    borderRadius: 6, border: 'none', cursor: 'pointer', textAlign: 'center',
-                    background: selBg, color: isSel ? '#fff' : T.text,
+                    borderRadius: 8, border: 'none', cursor: 'pointer', textAlign: 'center',
+                    background: selBg,
+                    color: isSel ? (T.dark ? '#fff' : accent.c) : T.text,
                     opacity: isCut ? 0.4 : 1,
-                    transition: 'background 0.08s',
+                    outline: isSel ? `1px solid rgba(${accent.rgb}, 0.35)` : 'none',
+                    boxShadow: isSel ? `0 0 14px rgba(${accent.rgb}, 0.14) inset` : 'none',
+                    transition: 'background 0.1s',
                   }}
                   onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = T.hoverBg }}
-                  onMouseLeave={e => { e.currentTarget.style.background = selBg }}>
+                  onMouseLeave={e => { if (!isSel) e.currentTarget.style.background = selBg }}>
                   <div style={{ position: 'relative' }}>
                     <FileTile kind={item.kind} name={item.name} size={26} />
                     {isStarred && (
@@ -306,8 +314,12 @@ export default function CascadeColumn({
           const showCheck = isHovered || isMulti
 
           const rowBg = isDragTarget
-            ? accent.soft
-            : isSel ? (isMulti ? accent.soft : accent.c) : (isKb ? T.hoverBg : (isHovered ? T.hoverBg : 'transparent'))
+            ? `rgba(${accent.rgb}, 0.14)`
+            : isSel && !isMulti
+              ? `rgba(${accent.rgb}, ${T.dark ? '0.24' : '0.16'})`
+              : isMulti
+                ? `rgba(${accent.rgb}, 0.11)`
+                : (isKb || isHovered) ? T.hoverBg : 'transparent'
 
           return (
             <div
@@ -358,11 +370,17 @@ export default function CascadeColumn({
                 style={{
                   width: '100%', display: 'flex', alignItems: 'center', gap: 9,
                   padding: '6px 10px', paddingRight: isHovered ? 96 : 10,
-                  borderRadius: 4, border: 'none',
+                  borderRadius: 5, border: 'none',
                   background: rowBg,
-                  color: isSel && !isMulti ? '#fff' : T.text,
+                  color: isSel && !isMulti ? (T.dark ? '#fff' : accent.c) : T.text,
                   cursor: 'pointer', fontSize: 12, textAlign: 'left', flex: 1,
-                  outline: (isDragTarget || isKb) ? `1px solid ${accent.c}44` : 'none',
+                  outline: isSel && !isMulti
+                    ? `1px solid rgba(${accent.rgb}, ${T.dark ? '0.38' : '0.30'})`
+                    : (isDragTarget || isKb) ? `1px solid ${accent.c}44` : 'none',
+                  boxShadow: isSel && !isMulti
+                    ? `0 0 18px rgba(${accent.rgb}, ${T.dark ? '0.16' : '0.10'}) inset`
+                    : 'none',
+                  transition: 'background 0.1s, box-shadow 0.1s',
                 }}>
                 <FileTile kind={item.kind} name={item.name} size={18} />
                 {isRenaming ? (

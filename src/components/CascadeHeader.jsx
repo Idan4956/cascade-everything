@@ -9,8 +9,10 @@ export default function CascadeHeader({ cascade, nodeMap, setCascade, openPalett
   return (
     <div style={{
       display: 'flex', flexDirection: 'column',
-      background: T.headerBg,
-      borderBottom: `1px solid ${T.border}`,
+      background: T.glassHeaderBg,
+      backdropFilter: T.glassBlur,
+      WebkitBackdropFilter: T.glassBlur,
+      borderBottom: `1px solid ${T.glassBorder}`,
       WebkitAppRegion: 'drag',
       flexShrink: 0,
     }}>

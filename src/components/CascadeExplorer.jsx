@@ -15,10 +15,10 @@ import { ThemeProvider, useTheme } from '../contexts/ThemeContext'
 import SettingsModal from './SettingsModal'
 
 const ACCENTS = {
-  purple: { c: '#6f4cb3', soft: 'rgba(111,76,179,.14)', tint: 'rgba(111,76,179,.06)' },
-  teal:   { c: '#00838f', soft: 'rgba(0,131,143,.14)',  tint: 'rgba(0,131,143,.06)'  },
-  blue:   { c: '#0067c0', soft: 'rgba(0,103,192,.14)',  tint: 'rgba(0,103,192,.06)'  },
-  sun:    { c: '#b8651f', soft: 'rgba(184,101,31,.16)', tint: 'rgba(184,101,31,.08)' },
+  purple: { c: '#6f4cb3', rgb: '111,76,179',  soft: 'rgba(111,76,179,.18)', tint: 'rgba(111,76,179,.07)' },
+  teal:   { c: '#00838f', rgb: '0,131,143',   soft: 'rgba(0,131,143,.18)',  tint: 'rgba(0,131,143,.07)'  },
+  blue:   { c: '#0067c0', rgb: '0,103,192',   soft: 'rgba(0,103,192,.18)',  tint: 'rgba(0,103,192,.07)'  },
+  sun:    { c: '#b8651f', rgb: '184,101,31',  soft: 'rgba(184,101,31,.20)', tint: 'rgba(184,101,31,.09)' },
 }
 
 export default function CascadeExplorer(props) {
@@ -508,7 +508,7 @@ function CascadeExplorerInner({ homedir, accent: accentProp = 'blue' }) {
       fontFamily: '"Segoe UI Variable", "Segoe UI", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
       color: T.text, display: 'flex', flexDirection: 'column',
       overflow: 'hidden', borderRadius: 8,
-      background: T.bg, position: 'relative',
+      background: T.appBg, position: 'relative',
     }}>
       <CascadeHeader
         cascade={activePane === 'right' ? rightCascade : cascade}

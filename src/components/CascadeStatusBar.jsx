@@ -27,8 +27,10 @@ export default function CascadeStatusBar({ cascade, multiSel, nodeMap, accent, g
     <div style={{
       height: 26, padding: '0 10px',
       display: 'flex', alignItems: 'center', gap: 12,
-      background: T.statusBg,
-      borderTop: `1px solid ${T.border}`,
+      background: T.glassStatusBg,
+      backdropFilter: T.glassBlur,
+      WebkitBackdropFilter: T.glassBlur,
+      borderTop: `1px solid ${T.glassBorder}`,
       fontSize: 11, color: T.textSub, flexShrink: 0,
     }}>
       <span>{cascade.length - 1} level{cascade.length !== 2 ? 's' : ''} deep</span>
