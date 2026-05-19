@@ -29,7 +29,7 @@ export default function CascadeHeader({ cascade, nodeMap, setCascade, openPalett
         </div>
 
         {/* Breadcrumb pills */}
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 2, overflow: 'hidden', WebkitAppRegion: 'no-drag', padding: '0 4px' }}>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 2, overflow: 'hidden', padding: '0 4px' }}>
           {cascade.map((p, i) => {
             const node = nodeMap[p]
             const label = node ? node.name : p.split('/').pop() || p.split('\\').pop() || p
@@ -53,6 +53,7 @@ export default function CascadeHeader({ cascade, nodeMap, setCascade, openPalett
                     display: 'flex', alignItems: 'center', gap: 5,
                     whiteSpace: 'nowrap', flexShrink: i < cascade.length - 3 ? 1 : 0,
                     overflow: 'hidden', maxWidth: 160,
+                    WebkitAppRegion: 'no-drag',
                   }}>
                   <FileTile kind={node?.kind || 'folder'} size={13} />
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
@@ -151,7 +152,7 @@ export default function CascadeHeader({ cascade, nodeMap, setCascade, openPalett
         <div style={{
           display: 'flex', alignItems: 'center', gap: 6,
           padding: '0 12px 6px', fontSize: 10.5, color: T.textDim,
-          WebkitAppRegion: 'no-drag', overflow: 'hidden',
+          overflow: 'hidden',
           borderTop: `1px solid ${T.border}`,
           paddingTop: 5,
         }}>
@@ -165,6 +166,7 @@ export default function CascadeHeader({ cascade, nodeMap, setCascade, openPalett
                 border: `1px solid ${T.borderMid}`, background: 'transparent',
                 color: T.textSub, fontSize: 10.5, cursor: 'pointer',
                 display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap', flexShrink: 0,
+                WebkitAppRegion: 'no-drag',
               }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = accent.tint; e.currentTarget.style.color = accent.c }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = T.textSub }}>
