@@ -354,6 +354,14 @@ function CascadeExplorerInner({ homedir, accent: accentProp = 'blue' }) {
     if (!result?.error) {
       clearDirCache(srcDir)
       clearDirCache(destDirPath)
+      // Optimistic nodeMap update so kind/metadata is correct immediately
+      setNodeMap(prev => {
+        if (!prev[srcPath]) return prev
+        const next = { ...prev }
+        next[destPath] = { ...next[srcPath], path: destPath, name }
+        delete next[srcPath]
+        return next
+      })
       _setCascade(prev => prev.map(p => p === srcPath ? destPath : p))
       setRefreshKey(k => k + 1)
       addToast(`Moved "${name}"`)
@@ -483,6 +491,23 @@ function CascadeExplorerInner({ homedir, accent: accentProp = 'blue' }) {
   const previewItem = lastIsFile ? lastNode : (lastSelItems.length === 1 ? lastSelItems[0] : null)
   const parentPath = cascade.length >= 2 ? cascade[cascade.length - 2] : null
 
+  const previewImageSiblings = React.useMemo(() => {
+    if (!previewItem || previewItem.kind !== 'image') return []
+    const sep = previewItem.path.includes('\\') ? '\\' : '/'
+    const parentDir = previewItem.path.substring(0, previewItem.path.lastIndexOf(sep))
+    return Object.values(nodeMap)
+      .filter(n => {
+        if (n.isDirectory || n.kind !== 'image') return false
+        const s = n.path.includes('\\') ? '\\' : '/'
+        return n.path.substring(0, n.path.lastIndexOf(s)) === parentDir
+      })
+      .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }))
+  }, [previewItem, nodeMap])
+
+  const navigateToImage = React.useCallback((imgPath) => {
+    navigateTo([...cascade.slice(0, -1), imgPath])
+  }, [cascade, navigateTo])
+
   // Right-pane navigation
   const rightNavigateTo = React.useCallback((c) => {
     setRightCascade(c); setRightHistory(h => [...h.slice(-9), rightCascade]); setRightForwardHistory([])
@@ -502,13 +527,23 @@ function CascadeExplorerInner({ homedir, accent: accentProp = 'blue' }) {
 
   const colProps = { refreshKey, multiSel, colFilters, setColFilters, pinnedCols, quickFilters, showHidden, tagMap, tagDefs, activeTagFilter, cutPaths, starredPaths, starFilter, gitInfo, onEntries: registerEntries, accent: A, onDelete: (item) => deleteItems([item]), onRename: renameItem, onCopy: copyItem, onMove: moveItem, onToggleStar: toggleStar }
 
+  // Dynamic background: accent-colored light pools show through glass panels
+  const appBg = T.dark
+    ? `radial-gradient(ellipse at 15% 20%, rgba(${A.rgb},0.28) 0%, transparent 48%),
+       radial-gradient(ellipse at 85% 80%, rgba(${A.rgb},0.20) 0%, transparent 44%),
+       radial-gradient(ellipse at 50% 50%, rgba(${A.rgb},0.08) 0%, transparent 60%),
+       ${T.appBg}`
+    : `radial-gradient(ellipse at 10% 15%, rgba(${A.rgb},0.14) 0%, transparent 45%),
+       radial-gradient(ellipse at 90% 85%, rgba(${A.rgb},0.10) 0%, transparent 45%),
+       ${T.appBg}`
+
   return (
     <div style={{
       width: '100%', height: '100%',
       fontFamily: '"Segoe UI Variable", "Segoe UI", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
       color: T.text, display: 'flex', flexDirection: 'column',
       overflow: 'hidden', borderRadius: 8,
-      background: T.appBg, position: 'relative',
+      background: appBg, position: 'relative',
     }}>
       <CascadeHeader
         cascade={activePane === 'right' ? rightCascade : cascade}
@@ -561,7 +596,8 @@ function CascadeExplorerInner({ homedir, accent: accentProp = 'blue' }) {
               ) : lastSelItems.length > 1 ? (
                 <CompareView items={lastSelItems} accent={A} />
               ) : (
-                <CascadeDeepPreview item={previewItem} accent={A} tagMap={tagMap} onToggleTag={toggleTag} tagDefs={tagDefs} onAddTag={addTag} />
+                <CascadeDeepPreview item={previewItem} accent={A} tagMap={tagMap} onToggleTag={toggleTag} tagDefs={tagDefs} onAddTag={addTag}
+                  siblings={previewImageSiblings} onNavigate={navigateToImage} />
               )
             )}
           </div>

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell, dialog } from 'electron'
+import { app, BrowserWindow, ipcMain, shell, dialog, screen } from 'electron'
 import { join } from 'path'
 import fs from 'fs'
 import https from 'https'
@@ -130,6 +130,28 @@ ipcMain.handle('app:checkUpdate', () => new Promise((resolve) => {
   req.end()
 }))
 
+// ── Window bounds persistence ─────────────────────────────────────────────────
+const boundsPath = () => path.join(app.getPath('userData'), 'window-bounds.json')
+
+function loadWindowBounds() {
+  try {
+    const b = JSON.parse(fs.readFileSync(boundsPath(), 'utf-8'))
+    const displays = screen.getAllDisplays()
+    const isVisible = displays.some(d =>
+      b.x >= d.bounds.x && b.y >= d.bounds.y &&
+      b.x < d.bounds.x + d.bounds.width &&
+      b.y < d.bounds.y + d.bounds.height
+    )
+    if (isVisible && b.width >= 900 && b.height >= 600) return b
+  } catch {}
+  return { width: 1400, height: 860 }
+}
+
+function saveWindowBounds(win) {
+  if (win.isMaximized() || win.isMinimized()) return
+  try { fs.writeFileSync(boundsPath(), JSON.stringify(win.getBounds())) } catch {}
+}
+
 function getLaunchPath() {
   const args = process.argv.slice(app.isPackaged ? 1 : 2)
   for (const arg of args) {
@@ -144,11 +166,12 @@ function getLaunchPath() {
 
 function createWindow() {
   const launchPath = getLaunchPath()
+  const savedBounds = loadWindowBounds()
   const win = new BrowserWindow({
-    width: 1400,
-    height: 860,
+    ...savedBounds,
     minWidth: 900,
     minHeight: 600,
+    resizable: true,
     frame: false,
     titleBarStyle: 'hidden',
     trafficLightPosition: { x: 16, y: 14 },
@@ -184,6 +207,8 @@ function createWindow() {
 
   win.on('maximize', () => win.webContents.send('window:maximized', true))
   win.on('unmaximize', () => win.webContents.send('window:maximized', false))
+  win.on('resize', () => saveWindowBounds(win))
+  win.on('moved', () => saveWindowBounds(win))
   mainWin = win
 }
 

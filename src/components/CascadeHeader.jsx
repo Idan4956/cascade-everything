@@ -13,6 +13,9 @@ export default function CascadeHeader({ cascade, nodeMap, setCascade, openPalett
       backdropFilter: T.glassBlur,
       WebkitBackdropFilter: T.glassBlur,
       borderBottom: `1px solid ${T.glassBorder}`,
+      boxShadow: T.dark
+        ? 'inset 0 1px 0 rgba(255,255,255,0.13), 0 2px 12px rgba(0,0,0,0.25)'
+        : 'inset 0 1px 0 rgba(255,255,255,0.95), 0 1px 6px rgba(0,0,0,0.06)',
       WebkitAppRegion: 'drag',
       flexShrink: 0,
     }}>

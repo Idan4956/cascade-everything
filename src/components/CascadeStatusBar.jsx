@@ -31,6 +31,9 @@ export default function CascadeStatusBar({ cascade, multiSel, nodeMap, accent, g
       backdropFilter: T.glassBlur,
       WebkitBackdropFilter: T.glassBlur,
       borderTop: `1px solid ${T.glassBorder}`,
+      boxShadow: T.dark
+        ? 'inset 0 1px 0 rgba(255,255,255,0.07)'
+        : 'inset 0 1px 0 rgba(255,255,255,0.80)',
       fontSize: 11, color: T.textSub, flexShrink: 0,
     }}>
       <span>{cascade.length - 1} level{cascade.length !== 2 ? 's' : ''} deep</span>

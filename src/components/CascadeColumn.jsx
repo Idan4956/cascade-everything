@@ -130,8 +130,12 @@ export default function CascadeColumn({
   }
 
   const pinnedBg = T.dark
-    ? `linear-gradient(180deg, rgba(${accent.rgb},0.13), ${T.glassBg})`
-    : `linear-gradient(180deg, rgba(${accent.rgb},0.09), ${T.glassBg})`
+    ? `linear-gradient(180deg, rgba(${accent.rgb},0.22) 0%, ${T.glassBg} 40%)`
+    : `linear-gradient(180deg, rgba(${accent.rgb},0.12) 0%, ${T.glassBg} 40%)`
+
+  const colShadow = T.dark
+    ? 'inset 0 1px 0 rgba(255,255,255,0.13), inset 1px 0 0 rgba(255,255,255,0.07), 4px 0 16px rgba(0,0,0,0.30)'
+    : 'inset 0 1px 0 rgba(255,255,255,0.95), inset 1px 0 0 rgba(255,255,255,0.7), 2px 0 8px rgba(0,0,0,0.06)'
 
   return (
     <div
@@ -140,14 +144,14 @@ export default function CascadeColumn({
       onBlur={() => setKbIdx(-1)}
       style={{
         width: 240, minWidth: 240, maxWidth: 240,
-        borderRight: `1px solid ${T.glassBorder}`,
+        borderRight: `1px solid ${T.glassBorderOuter}`,
         background: isPinned ? pinnedBg : T.glassBg,
         backdropFilter: T.glassBlur,
         WebkitBackdropFilter: T.glassBlur,
         display: 'flex', flexDirection: 'column', minHeight: 0,
         scrollSnapAlign: 'start', flexShrink: 0,
-        outline: 'none',
-        boxShadow: T.dark ? '2px 0 12px rgba(0,0,0,0.18)' : '2px 0 8px rgba(0,0,0,0.04)',
+        outline: 'none', position: 'relative',
+        boxShadow: colShadow,
       }}>
 
       {/* Column header */}
@@ -156,7 +160,8 @@ export default function CascadeColumn({
         display: 'flex', alignItems: 'center', gap: 4,
         fontSize: 9.5, color: T.textDim,
         borderBottom: `1px solid ${T.glassBorder}`,
-        background: T.dark ? 'rgba(0,0,0,0.18)' : 'rgba(0,0,0,0.028)',
+        background: T.dark ? 'rgba(0,0,0,0.25)' : 'rgba(0,0,0,0.032)',
+        boxShadow: T.dark ? 'inset 0 -1px 0 rgba(255,255,255,0.04)' : 'inset 0 -1px 0 rgba(255,255,255,0.6)',
         fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', flexShrink: 0,
       }}>
         <span style={{ flex: 1 }}>
@@ -256,7 +261,7 @@ export default function CascadeColumn({
               const isSel = selectedPath === item.path || multiSel.includes(item.path)
               const isCut = cutPaths?.has(item.path)
               const isStarred = starredPaths?.has(item.path)
-              const selBg = isSel ? `rgba(${accent.rgb}, ${T.dark ? '0.24' : '0.16'})` : 'transparent'
+              const selBg = isSel ? `rgba(${accent.rgb}, ${T.dark ? '0.30' : '0.18'})` : 'transparent'
               return (
                 <button
                   key={item.path}
@@ -271,11 +276,13 @@ export default function CascadeColumn({
                     background: selBg,
                     color: isSel ? (T.dark ? '#fff' : accent.c) : T.text,
                     opacity: isCut ? 0.4 : 1,
-                    outline: isSel ? `1px solid rgba(${accent.rgb}, 0.35)` : 'none',
-                    boxShadow: isSel ? `0 0 14px rgba(${accent.rgb}, 0.14) inset` : 'none',
-                    transition: 'background 0.1s',
+                    outline: isSel ? `1.5px solid rgba(${accent.rgb}, 0.48)` : 'none',
+                    boxShadow: isSel
+                      ? `0 0 24px rgba(${accent.rgb}, ${T.dark ? '0.25' : '0.14'}) inset, inset 0 1px 0 rgba(255,255,255,${T.dark ? '0.20' : '0.6'})`
+                      : 'none',
+                    transition: 'background 0.12s, box-shadow 0.12s',
                   }}
-                  onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = T.hoverBg }}
+                  onMouseEnter={e => { if (!isSel) { e.currentTarget.style.background = T.dark ? 'rgba(255,255,255,0.09)' : 'rgba(0,0,0,0.05)' } }}
                   onMouseLeave={e => { if (!isSel) e.currentTarget.style.background = selBg }}>
                   <div style={{ position: 'relative' }}>
                     <FileTile kind={item.kind} name={item.name} size={26} />
@@ -314,12 +321,14 @@ export default function CascadeColumn({
           const showCheck = isHovered || isMulti
 
           const rowBg = isDragTarget
-            ? `rgba(${accent.rgb}, 0.14)`
+            ? `rgba(${accent.rgb}, 0.18)`
             : isSel && !isMulti
-              ? `rgba(${accent.rgb}, ${T.dark ? '0.24' : '0.16'})`
+              ? `rgba(${accent.rgb}, ${T.dark ? '0.30' : '0.18'})`
               : isMulti
-                ? `rgba(${accent.rgb}, 0.11)`
-                : (isKb || isHovered) ? T.hoverBg : 'transparent'
+                ? `rgba(${accent.rgb}, 0.14)`
+                : isHovered || isKb
+                  ? (T.dark ? 'rgba(255,255,255,0.09)' : 'rgba(0,0,0,0.05)')
+                  : 'transparent'
 
           return (
             <div
@@ -370,17 +379,21 @@ export default function CascadeColumn({
                 style={{
                   width: '100%', display: 'flex', alignItems: 'center', gap: 9,
                   padding: '6px 10px', paddingRight: isHovered ? 96 : 10,
-                  borderRadius: 5, border: 'none',
+                  borderRadius: 6, border: 'none',
                   background: rowBg,
                   color: isSel && !isMulti ? (T.dark ? '#fff' : accent.c) : T.text,
                   cursor: 'pointer', fontSize: 12, textAlign: 'left', flex: 1,
                   outline: isSel && !isMulti
-                    ? `1px solid rgba(${accent.rgb}, ${T.dark ? '0.38' : '0.30'})`
-                    : (isDragTarget || isKb) ? `1px solid ${accent.c}44` : 'none',
+                    ? `1.5px solid rgba(${accent.rgb}, ${T.dark ? '0.50' : '0.35'})`
+                    : isHovered && !isSel
+                      ? `1px solid ${T.dark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.07)'}`
+                      : (isDragTarget || isKb) ? `1px solid ${accent.c}55` : 'none',
                   boxShadow: isSel && !isMulti
-                    ? `0 0 18px rgba(${accent.rgb}, ${T.dark ? '0.16' : '0.10'}) inset`
-                    : 'none',
-                  transition: 'background 0.1s, box-shadow 0.1s',
+                    ? `0 0 28px rgba(${accent.rgb}, ${T.dark ? '0.28' : '0.15'}) inset, inset 0 1px 0 rgba(255,255,255,${T.dark ? '0.22' : '0.6'})`
+                    : isHovered && !isSel
+                      ? `inset 0 1px 0 rgba(255,255,255,${T.dark ? '0.08' : '0.7'})`
+                      : 'none',
+                  transition: 'background 0.12s, box-shadow 0.12s, outline-color 0.12s',
                 }}>
                 <FileTile kind={item.kind} name={item.name} size={18} />
                 {isRenaming ? (

@@ -92,7 +92,10 @@ export default function CascadeSidebar({
       background: T.glassSidebarBg,
       backdropFilter: T.glassBlur,
       WebkitBackdropFilter: T.glassBlur,
-      borderRight: `1px solid ${T.glassBorder}`,
+      borderRight: `1px solid ${T.glassBorderOuter}`,
+      boxShadow: T.dark
+        ? 'inset 0 1px 0 rgba(255,255,255,0.10), 2px 0 12px rgba(0,0,0,0.20)'
+        : 'inset 0 1px 0 rgba(255,255,255,0.90), 2px 0 8px rgba(0,0,0,0.04)',
       overflow: 'auto',
       flexShrink: 0,
     }}>
