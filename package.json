@@ -1,7 +1,7 @@
 {
-  "name": "file-explorer",
+  "name": "cascade-explorer",
   "version": "2.0.0",
-  "description": "Advanced file explorer — Cascade design",
+  "description": "A fast, beautiful file explorer with column browsing, smart folders, tagging, and AI search",
   "main": "out/main/main.js",
   "scripts": {
     "dev": "electron-vite dev",
@@ -36,8 +36,8 @@
     ],
     "win": {
       "target": [
-        { "target": "nsis", "arch": ["x64"] },
-        { "target": "zip",  "arch": ["x64"] }
+        { "target": "nsis",  "arch": ["x64"] },
+        { "target": "appx",  "arch": ["x64"] }
       ],
       "icon": "resources/icon.png"
     },
@@ -48,6 +48,17 @@
       "runAfterFinish": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
+    },
+    "appx": {
+      "applicationId": "CascadeExplorer",
+      "backgroundColor": "#0d0b18",
+      "displayName": "Cascade",
+      "identityName": "Idan4956.Cascade",
+      "publisher": "CN=Idan4956",
+      "publisherDisplayName": "Idan4956",
+      "languages": ["en-US"],
+      "addAutoLaunchExtension": false,
+      "showNameOnTiles": true
     },
     "fileAssociations": [
       {
@@ -64,14 +75,15 @@
       }
     ],
     "mac": {
-      "target": "zip",
+      "target": "dmg",
       "category": "public.app-category.utilities",
       "icon": "resources/icon.png"
     },
     "linux": {
-      "target": "tar.gz",
+      "target": "AppImage",
       "category": "Utility",
       "icon": "resources/icon.png"
     }
   }
 }
+

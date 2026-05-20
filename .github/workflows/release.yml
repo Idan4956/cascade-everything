@@ -8,27 +8,113 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: windows-latest
-            platform: Windows
-            eb_args: --win zip
-            artifact: release/*.zip
-          - os: macos-latest
-            platform: macOS
-            eb_args: --mac zip
-            artifact: release/*.zip
-          - os: ubuntu-latest
-            platform: Linux
-            eb_args: --linux tar.gz
-            artifact: release/*.tar.gz
+  build-windows:
+    runs-on: windows-latest
+    name: Build for Windows
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
 
-    runs-on: ${{ matrix.os }}
-    name: Build for ${{ matrix.platform }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
 
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build JS
+        run: npm run build
+
+      - name: Build Windows installer (NSIS)
+        run: ./node_modules/.bin/electron-builder --win nsis --publish=never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+          GH_TOKEN: ""
+
+      - name: Rename installer for release
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Path release -Filter "*.exe" | Select-Object -First 1
+          if ($exe) { Rename-Item $exe.FullName "Cascade-Setup.exe" }
+
+      - name: Upload Windows installer
+        uses: softprops/action-gh-release@v1
+        with:
+          files: release/Cascade-Setup.exe
+
+  build-windows-msix:
+    runs-on: windows-latest
+    name: Build Windows MSIX (Store)
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build JS
+        run: npm run build
+
+      - name: Build MSIX
+        run: ./node_modules/.bin/electron-builder --win appx --publish=never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+          GH_TOKEN: ""
+
+      - name: Rename MSIX for release
+        shell: pwsh
+        run: |
+          $msix = Get-ChildItem -Path release -Filter "*.appx" | Select-Object -First 1
+          if ($msix) { Rename-Item $msix.FullName "Cascade.appx" }
+
+      - name: Upload MSIX
+        uses: softprops/action-gh-release@v1
+        with:
+          files: release/Cascade.appx
+
+  build-macos:
+    runs-on: macos-latest
+    name: Build for macOS
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build JS
+        run: npm run build
+
+      - name: Build macOS DMG
+        run: ./node_modules/.bin/electron-builder --mac dmg --publish=never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+          GH_TOKEN: ""
+
+      - name: Rename DMG for release
+        run: |
+          DMG=$(find release -name "*.dmg" | head -1)
+          if [ -n "$DMG" ]; then mv "$DMG" release/Cascade-mac.dmg; fi
+
+      - name: Upload macOS DMG
+        uses: softprops/action-gh-release@v1
+        with:
+          files: release/Cascade-mac.dmg
+
+  build-linux:
+    runs-on: ubuntu-latest
+    name: Build for Linux
     steps:
       - uses: actions/checkout@v4
         with:
@@ -42,20 +128,23 @@ jobs:
         run: npm install
 
       - name: Install Linux build deps
-        if: matrix.os == 'ubuntu-latest'
         run: sudo apt-get install -y rpm fakeroot
 
       - name: Build JS
         run: npm run build
 
-      - name: Package app
-        run: ./node_modules/.bin/electron-builder ${{ matrix.eb_args }} --publish=never
+      - name: Build Linux AppImage
+        run: ./node_modules/.bin/electron-builder --linux AppImage --publish=never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
-          GITHUB_TOKEN: ""
           GH_TOKEN: ""
 
-      - name: Upload to release
+      - name: Rename AppImage for release
+        run: |
+          IMG=$(find release -name "*.AppImage" | head -1)
+          if [ -n "$IMG" ]; then mv "$IMG" release/Cascade-linux.AppImage; fi
+
+      - name: Upload Linux AppImage
         uses: softprops/action-gh-release@v1
         with:
-          files: ${{ matrix.artifact }}
+          files: release/Cascade-linux.AppImage
