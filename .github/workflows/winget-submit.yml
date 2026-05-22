@@ -1,0 +1,15 @@
+name: Submit to Winget
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  submit:
+    runs-on: windows-latest
+    steps:
+      - uses: vedantmgoyal2009/winget-releaser@v2
+        with:
+          identifier: Idan4956.Cascade
+          installers-regex: 'Cascade-Setup\.exe$'
+          token: ${{ secrets.WINGET_TOKEN }}

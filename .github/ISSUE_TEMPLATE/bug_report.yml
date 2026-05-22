@@ -1,0 +1,76 @@
+name: Bug report
+description: Something isn't working as expected
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill in as much detail as you can.
+
+  - type: input
+    id: version
+    attributes:
+      label: Cascade version
+      description: Found in the title bar or Settings → About
+      placeholder: "e.g. 2.0.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Operating system
+      options:
+        - Windows 11
+        - Windows 10
+        - macOS 14 (Sonoma)
+        - macOS 13 (Ventura)
+        - macOS 12 (Monterey)
+        - Ubuntu / Debian
+        - Fedora / RHEL
+        - Other Linux
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear and concise description of the bug.
+      placeholder: "When I click X, Y happens instead of Z."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps that reliably reproduce the problem.
+      placeholder: |
+        1. Open Cascade
+        2. Navigate to ...
+        3. Click ...
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+      placeholder: "I expected X to happen."
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / error message
+      description: Paste any relevant log output (open DevTools via Ctrl+Shift+I on Windows/Linux, Cmd+Option+I on macOS).
+      render: text
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Screenshots, screen recordings, or any other relevant information.
