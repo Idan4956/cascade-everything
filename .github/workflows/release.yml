@@ -3,6 +3,12 @@ name: Build & Release
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to build for (e.g. V2.1.0)'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -10,11 +16,11 @@ permissions:
 jobs:
   build-windows:
     runs-on: windows-latest
-    name: Build for Windows
+    name: Build Windows Installer
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
 
       - uses: actions/setup-node@v4
         with:
@@ -26,22 +32,34 @@ jobs:
       - name: Build JS
         run: npm run build
 
-      - name: Build Windows installer (NSIS)
+      - name: Build Windows NSIS installer
         run: ./node_modules/.bin/electron-builder --win nsis --publish=never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
-          GH_TOKEN: ""
 
-      - name: Rename installer for release
+      - name: Collect artifacts
         shell: pwsh
         run: |
-          $exe = Get-ChildItem -Path release -Filter "*.exe" | Select-Object -First 1
-          if ($exe) { Rename-Item $exe.FullName "Cascade-Setup.exe" }
+          $exe = Get-ChildItem -Path release -Filter "*.exe" |
+            Where-Object { $_.Name -notmatch 'unins' } |
+            Select-Object -First 1
+          if ($exe) {
+            Rename-Item $exe.FullName "Cascade-Setup.exe"
+            Write-Host "Renamed to Cascade-Setup.exe"
+          } else {
+            Write-Error "No installer .exe found in release/"
+            exit 1
+          }
 
-      - name: Upload Windows installer
+      - name: Upload installer + update manifest
         uses: softprops/action-gh-release@v1
         with:
-          files: release/Cascade-Setup.exe
+          tag_name: ${{ github.event.release.tag_name || inputs.tag }}
+          files: |
+            release/Cascade-Setup.exe
+            release/latest.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-windows-msix:
     runs-on: windows-latest
@@ -49,7 +67,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
 
       - uses: actions/setup-node@v4
         with:
@@ -65,26 +83,34 @@ jobs:
         run: ./node_modules/.bin/electron-builder --win appx --publish=never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
-          GH_TOKEN: ""
 
-      - name: Rename MSIX for release
+      - name: Collect artifacts
         shell: pwsh
         run: |
           $msix = Get-ChildItem -Path release -Filter "*.appx" | Select-Object -First 1
-          if ($msix) { Rename-Item $msix.FullName "Cascade.appx" }
+          if ($msix) {
+            Rename-Item $msix.FullName "Cascade.appx"
+            Write-Host "Renamed to Cascade.appx"
+          } else {
+            Write-Error "No .appx found in release/"
+            exit 1
+          }
 
       - name: Upload MSIX
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: ${{ github.event.release.tag_name || inputs.tag }}
           files: release/Cascade.appx
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-macos:
     runs-on: macos-latest
-    name: Build for macOS
+    name: Build macOS DMG
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
 
       - uses: actions/setup-node@v4
         with:
@@ -100,25 +126,34 @@ jobs:
         run: ./node_modules/.bin/electron-builder --mac dmg --publish=never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
-          GH_TOKEN: ""
 
-      - name: Rename DMG for release
+      - name: Collect artifacts
         run: |
           DMG=$(find release -name "*.dmg" | head -1)
-          if [ -n "$DMG" ]; then mv "$DMG" release/Cascade-mac.dmg; fi
+          if [ -n "$DMG" ]; then
+            mv "$DMG" release/Cascade-mac.dmg
+            echo "Renamed to Cascade-mac.dmg"
+          else
+            echo "No DMG found" && exit 1
+          fi
 
-      - name: Upload macOS DMG
+      - name: Upload DMG + update manifest
         uses: softprops/action-gh-release@v1
         with:
-          files: release/Cascade-mac.dmg
+          tag_name: ${{ github.event.release.tag_name || inputs.tag }}
+          files: |
+            release/Cascade-mac.dmg
+            release/latest-mac.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-linux:
     runs-on: ubuntu-latest
-    name: Build for Linux
+    name: Build Linux AppImage
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
 
       - uses: actions/setup-node@v4
         with:
@@ -137,14 +172,23 @@ jobs:
         run: ./node_modules/.bin/electron-builder --linux AppImage --publish=never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
-          GH_TOKEN: ""
 
-      - name: Rename AppImage for release
+      - name: Collect artifacts
         run: |
           IMG=$(find release -name "*.AppImage" | head -1)
-          if [ -n "$IMG" ]; then mv "$IMG" release/Cascade-linux.AppImage; fi
+          if [ -n "$IMG" ]; then
+            mv "$IMG" release/Cascade-linux.AppImage
+            echo "Renamed to Cascade-linux.AppImage"
+          else
+            echo "No AppImage found" && exit 1
+          fi
 
-      - name: Upload Linux AppImage
+      - name: Upload AppImage + update manifest
         uses: softprops/action-gh-release@v1
         with:
-          files: release/Cascade-linux.AppImage
+          tag_name: ${{ github.event.release.tag_name || inputs.tag }}
+          files: |
+            release/Cascade-linux.AppImage
+            release/latest-linux.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

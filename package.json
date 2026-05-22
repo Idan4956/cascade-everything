@@ -1,6 +1,6 @@
 {
   "name": "cascade-explorer",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "A fast, beautiful file explorer with column browsing, smart folders, tagging, and AI search",
   "main": "out/main/main.js",
   "scripts": {
@@ -26,7 +26,11 @@
   "build": {
     "appId": "com.cascade.fileexplorer",
     "productName": "Cascade",
-    "publish": null,
+    "publish": {
+      "provider": "github",
+      "owner": "Idan4956",
+      "repo": "cascade-explorer"
+    },
     "icon": "resources/icon.png",
     "directories": {
       "output": "release"
