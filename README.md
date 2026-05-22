@@ -48,12 +48,18 @@ Cascade replaces your OS file manager with a column-based browser that shows you
 
 ### Package managers
 
-**Windows — winget**
+**Windows — Scoop**
+```powershell
+scoop bucket add cascade-explorer https://github.com/Idan4956/cascade-explorer
+scoop install cascade
+```
+
+**Windows — winget** *(pending approval)*
 ```powershell
 winget install Idan4956.Cascade
 ```
 
-**macOS — Homebrew**
+**macOS — Homebrew** *(coming soon)*
 ```bash
 brew install --cask cascade-explorer
 ```
@@ -63,8 +69,6 @@ brew install --cask cascade-explorer
 chmod +x Cascade-linux.AppImage
 ./Cascade-linux.AppImage
 ```
-
-> Package manager listings are submitted after each release. If the version shown is behind, use the direct download above.
 
 ## 🔨 Build from source
 

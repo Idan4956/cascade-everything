@@ -1,0 +1,37 @@
+# Winget manifest — submit this file as a PR to microsoft/winget-pkgs
+# Path in winget-pkgs: manifests/i/Idan4956/Cascade/2.1.0/Idan4956.Cascade.yaml
+#
+# Before submitting:
+#   1. Run the "Build & Release" workflow_dispatch for tag V2.1.0 to produce Cascade-Setup.exe
+#   2. Replace INSTALLER_SHA256 below with: certutil -hashfile Cascade-Setup.exe SHA256
+#   3. Submit PR to https://github.com/microsoft/winget-pkgs
+
+PackageIdentifier: Idan4956.Cascade
+PackageVersion: 2.1.0
+PackageName: Cascade
+Publisher: Idan4956
+PublisherUrl: https://github.com/Idan4956
+PublisherSupportUrl: https://github.com/Idan4956/cascade-explorer/issues
+PackageUrl: https://idan4956.github.io/cascade-explorer/
+License: MIT
+LicenseUrl: https://github.com/Idan4956/cascade-explorer/blob/main/LICENSE
+ShortDescription: A fast, beautiful file explorer with column browsing, smart folders, tagging, and AI search
+Description: |-
+  Cascade replaces your OS file manager with a column-based browser that shows your
+  entire folder hierarchy at once. Navigate deep trees instantly, preview any file in
+  place, tag files with colour-coded labels, and search your whole system in seconds.
+Tags:
+  - file-explorer
+  - file-manager
+  - productivity
+  - electron
+Installers:
+  - Architecture: x64
+    InstallerType: nullsoft
+    InstallerUrl: https://github.com/Idan4956/cascade-explorer/releases/download/V2.1.0/Cascade-Setup.exe
+    InstallerSha256: REPLACE_WITH_SHA256_OF_Cascade-Setup.exe
+    InstallerSwitches:
+      Silent: /S
+      SilentWithProgress: /S
+ManifestType: merged
+ManifestVersion: 1.6.0

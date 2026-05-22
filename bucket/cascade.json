@@ -1,0 +1,27 @@
+{
+    "version": "2.1.0",
+    "description": "A fast, beautiful file explorer with column browsing, smart folders, tagging, and AI search",
+    "homepage": "https://idan4956.github.io/cascade-explorer/",
+    "license": "MIT",
+    "architecture": {
+        "64bit": {
+            "url": "https://github.com/Idan4956/cascade-explorer/releases/download/V2.1.0/Cascade-2.0.0-win.zip",
+            "hash": "42b089ffbce304c3667e0a27bdf6b6190f0fda2dbce45975876c361ee13e435e"
+        }
+    },
+    "bin": [["Cascade.exe", "cascade"]],
+    "shortcuts": [
+        ["Cascade.exe", "Cascade"]
+    ],
+    "checkver": {
+        "github": "https://github.com/Idan4956/cascade-explorer",
+        "regex": "V([\\d.]+)"
+    },
+    "autoupdate": {
+        "architecture": {
+            "64bit": {
+                "url": "https://github.com/Idan4956/cascade-explorer/releases/download/V$version/Cascade-Setup.exe"
+            }
+        }
+    }
+}
