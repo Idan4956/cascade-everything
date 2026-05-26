@@ -10,5 +10,8 @@
     "dev:photos": "npm -w apps/photos run dev",
     "build:explorer": "npm -w apps/explorer run build",
     "build:photos": "npm -w apps/photos run build"
+  },
+  "devDependencies": {
+    "electron": "33.2.1"
   }
 }
