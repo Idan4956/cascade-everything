@@ -40,8 +40,7 @@
     ],
     "win": {
       "target": [
-        { "target": "nsis",  "arch": ["x64"] },
-        { "target": "appx",  "arch": ["x64"] }
+        { "target": "nsis", "arch": ["x64"] }
       ],
       "icon": "resources/icon.png"
     },
@@ -52,17 +51,6 @@
       "runAfterFinish": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
-    },
-    "appx": {
-      "applicationId": "CascadeExplorer",
-      "backgroundColor": "#0d0b18",
-      "displayName": "Cascade",
-      "identityName": "Idan4956.Cascade",
-      "publisher": "CN=Idan4956",
-      "publisherDisplayName": "Idan4956",
-      "languages": ["en-US"],
-      "addAutoLaunchExtension": false,
-      "showNameOnTiles": true
     },
     "fileAssociations": [
       {
