@@ -28,8 +28,6 @@ jobs:
         with:
           node-version: 20
       - run: npm install
-        env:
-          ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
       - run: npm run build
         working-directory: apps/explorer
       - name: Build NSIS installer
@@ -63,8 +61,6 @@ jobs:
         with:
           node-version: 20
       - run: npm install
-        env:
-          ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
       - run: npm run build
         working-directory: apps/explorer
       - run: npx electron-builder --mac dmg --publish=never
@@ -96,8 +92,6 @@ jobs:
         with:
           node-version: 20
       - run: npm install
-        env:
-          ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
       - run: sudo apt-get install -y rpm fakeroot
       - run: npm run build
         working-directory: apps/explorer
@@ -132,8 +126,6 @@ jobs:
         with:
           node-version: 20
       - run: npm install
-        env:
-          ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
       - run: npm run build
         working-directory: apps/photos
       - run: npx electron-builder --win nsis --publish=never
@@ -164,8 +156,6 @@ jobs:
         with:
           node-version: 20
       - run: npm install
-        env:
-          ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
       - run: npm run build
         working-directory: apps/photos
       - run: npx electron-builder --mac dmg --publish=never
@@ -195,8 +185,6 @@ jobs:
         with:
           node-version: 20
       - run: npm install
-        env:
-          ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
       - run: sudo apt-get install -y rpm fakeroot
       - run: npm run build
         working-directory: apps/photos
