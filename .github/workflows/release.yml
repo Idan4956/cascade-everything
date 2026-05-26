@@ -13,182 +13,201 @@ on:
 permissions:
   contents: write
 
+# ── Reusable build logic ──────────────────────────────────────────────────────
+
 jobs:
-  build-windows:
+
+  # ── Explorer ────────────────────────────────────────────────────────────────
+
+  explorer-windows:
     runs-on: windows-latest
-    name: Build Windows Installer
+    name: Explorer · Windows
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.release.tag_name || inputs.tag }}
-
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Build JS
-        run: npm run build
-
-      - name: Build Windows NSIS installer
+      - run: npm install
+        working-directory: apps/explorer
+      - run: npm run build
+        working-directory: apps/explorer
+      - name: Build NSIS installer
         run: ./node_modules/.bin/electron-builder --win nsis --publish=never
+        working-directory: apps/explorer
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
-
-      - name: Collect artifacts
+      - name: Rename artifacts
         shell: pwsh
+        working-directory: apps/explorer
         run: |
-          $exe = Get-ChildItem -Path release -Filter "*.exe" |
-            Where-Object { $_.Name -notmatch 'unins' } |
-            Select-Object -First 1
-          if ($exe) {
-            Rename-Item $exe.FullName "Cascade-Setup.exe"
-            Write-Host "Renamed to Cascade-Setup.exe"
-          } else {
-            Write-Error "No installer .exe found in release/"
-            exit 1
-          }
-
-      - name: Upload installer + update manifest
-        uses: softprops/action-gh-release@v1
+          $exe = Get-ChildItem -Path release -Filter "*.exe" | Where-Object { $_.Name -notmatch 'unins' } | Select-Object -First 1
+          if ($exe) { Rename-Item $exe.FullName "Cascade-Explorer-Setup.exe" } else { exit 1 }
+      - uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.event.release.tag_name || inputs.tag }}
           files: |
-            release/Cascade-Setup.exe
-            release/latest.yml
+            apps/explorer/release/Cascade-Explorer-Setup.exe
+            apps/explorer/release/latest.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  build-windows-msix:
-    runs-on: windows-latest
-    name: Build Windows MSIX (Store)
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.release.tag_name || inputs.tag }}
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Build JS
-        run: npm run build
-
-      - name: Build MSIX
-        run: ./node_modules/.bin/electron-builder --win appx --publish=never
-        env:
-          CSC_IDENTITY_AUTO_DISCOVERY: false
-
-      - name: Collect artifacts
-        shell: pwsh
-        run: |
-          $msix = Get-ChildItem -Path release -Filter "*.appx" | Select-Object -First 1
-          if ($msix) {
-            Rename-Item $msix.FullName "Cascade.appx"
-            Write-Host "Renamed to Cascade.appx"
-          } else {
-            Write-Error "No .appx found in release/"
-            exit 1
-          }
-
-      - name: Upload MSIX
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ github.event.release.tag_name || inputs.tag }}
-          files: release/Cascade.appx
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  build-macos:
+  explorer-macos:
     runs-on: macos-latest
-    name: Build macOS DMG
+    name: Explorer · macOS
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.release.tag_name || inputs.tag }}
-
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Build JS
-        run: npm run build
-
-      - name: Build macOS DMG
-        run: ./node_modules/.bin/electron-builder --mac dmg --publish=never
+      - run: npm install
+        working-directory: apps/explorer
+      - run: npm run build
+        working-directory: apps/explorer
+      - run: ./node_modules/.bin/electron-builder --mac dmg --publish=never
+        working-directory: apps/explorer
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
-
-      - name: Collect artifacts
+      - name: Rename
+        working-directory: apps/explorer
         run: |
           DMG=$(find release -name "*.dmg" | head -1)
-          if [ -n "$DMG" ]; then
-            mv "$DMG" release/Cascade-mac.dmg
-            echo "Renamed to Cascade-mac.dmg"
-          else
-            echo "No DMG found" && exit 1
-          fi
-
-      - name: Upload DMG + update manifest
-        uses: softprops/action-gh-release@v1
+          [ -n "$DMG" ] && mv "$DMG" release/Cascade-Explorer-mac.dmg || exit 1
+      - uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.event.release.tag_name || inputs.tag }}
           files: |
-            release/Cascade-mac.dmg
-            release/latest-mac.yml
+            apps/explorer/release/Cascade-Explorer-mac.dmg
+            apps/explorer/release/latest-mac.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  build-linux:
+  explorer-linux:
     runs-on: ubuntu-latest
-    name: Build Linux AppImage
+    name: Explorer · Linux
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.release.tag_name || inputs.tag }}
-
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Install Linux build deps
-        run: sudo apt-get install -y rpm fakeroot
-
-      - name: Build JS
-        run: npm run build
-
-      - name: Build Linux AppImage
-        run: ./node_modules/.bin/electron-builder --linux AppImage --publish=never
+      - run: npm install
+        working-directory: apps/explorer
+      - run: sudo apt-get install -y rpm fakeroot
+      - run: npm run build
+        working-directory: apps/explorer
+      - run: ./node_modules/.bin/electron-builder --linux AppImage --publish=never
+        working-directory: apps/explorer
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
-
-      - name: Collect artifacts
+      - name: Rename
+        working-directory: apps/explorer
         run: |
           IMG=$(find release -name "*.AppImage" | head -1)
-          if [ -n "$IMG" ]; then
-            mv "$IMG" release/Cascade-linux.AppImage
-            echo "Renamed to Cascade-linux.AppImage"
-          else
-            echo "No AppImage found" && exit 1
-          fi
-
-      - name: Upload AppImage + update manifest
-        uses: softprops/action-gh-release@v1
+          [ -n "$IMG" ] && mv "$IMG" release/Cascade-Explorer-linux.AppImage || exit 1
+      - uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.event.release.tag_name || inputs.tag }}
           files: |
-            release/Cascade-linux.AppImage
-            release/latest-linux.yml
+            apps/explorer/release/Cascade-Explorer-linux.AppImage
+            apps/explorer/release/latest-linux.yml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── Photos ──────────────────────────────────────────────────────────────────
+
+  photos-windows:
+    runs-on: windows-latest
+    name: Photos · Windows
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+        working-directory: apps/photos
+      - run: npm run build
+        working-directory: apps/photos
+      - run: ./node_modules/.bin/electron-builder --win nsis --publish=never
+        working-directory: apps/photos
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+      - name: Rename
+        shell: pwsh
+        working-directory: apps/photos
+        run: |
+          $exe = Get-ChildItem -Path release -Filter "*.exe" | Where-Object { $_.Name -notmatch 'unins' } | Select-Object -First 1
+          if ($exe) { Rename-Item $exe.FullName "Cascade-Photos-Setup.exe" } else { exit 1 }
+      - uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.event.release.tag_name || inputs.tag }}
+          files: apps/photos/release/Cascade-Photos-Setup.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  photos-macos:
+    runs-on: macos-latest
+    name: Photos · macOS
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+        working-directory: apps/photos
+      - run: npm run build
+        working-directory: apps/photos
+      - run: ./node_modules/.bin/electron-builder --mac dmg --publish=never
+        working-directory: apps/photos
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+      - name: Rename
+        working-directory: apps/photos
+        run: |
+          DMG=$(find release -name "*.dmg" | head -1)
+          [ -n "$DMG" ] && mv "$DMG" release/Cascade-Photos-mac.dmg || exit 1
+      - uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.event.release.tag_name || inputs.tag }}
+          files: apps/photos/release/Cascade-Photos-mac.dmg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  photos-linux:
+    runs-on: ubuntu-latest
+    name: Photos · Linux
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+        working-directory: apps/photos
+      - run: sudo apt-get install -y rpm fakeroot
+      - run: npm run build
+        working-directory: apps/photos
+      - run: ./node_modules/.bin/electron-builder --linux AppImage --publish=never
+        working-directory: apps/photos
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+      - name: Rename
+        working-directory: apps/photos
+        run: |
+          IMG=$(find release -name "*.AppImage" | head -1)
+          [ -n "$IMG" ] && mv "$IMG" release/Cascade-Photos-linux.AppImage || exit 1
+      - uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.event.release.tag_name || inputs.tag }}
+          files: apps/photos/release/Cascade-Photos-linux.AppImage
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

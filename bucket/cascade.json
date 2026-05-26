@@ -20,7 +20,7 @@
     "autoupdate": {
         "architecture": {
             "64bit": {
-                "url": "https://github.com/Idan4956/cascade-explorer/releases/download/V$version/Cascade-Setup.exe"
+                "url": "https://github.com/Idan4956/cascade-explorer/releases/download/V$version/Cascade-Explorer-Setup.exe"
             }
         }
     }

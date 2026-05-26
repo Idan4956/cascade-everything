@@ -1,0 +1,93 @@
+{
+  "name": "cascade-explorer",
+  "version": "2.1.0",
+  "description": "A fast, beautiful file explorer with column browsing, smart folders, tagging, and AI search",
+  "main": "out/main/main.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "prepackage": "node scripts/generate-icon.mjs",
+    "package": "electron-vite build && electron-builder --publish=never"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.96.0",
+    "adm-zip": "^0.5.17",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8",
+    "electron-vite": "^2.3.0",
+    "vite": "^5.4.0"
+  },
+  "build": {
+    "appId": "com.cascade.fileexplorer",
+    "productName": "Cascade",
+    "publish": {
+      "provider": "github",
+      "owner": "Idan4956",
+      "repo": "cascade-explorer"
+    },
+    "icon": "resources/icon.png",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "out/**"
+    ],
+    "win": {
+      "target": [
+        { "target": "nsis",  "arch": ["x64"] },
+        { "target": "appx",  "arch": ["x64"] }
+      ],
+      "icon": "resources/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "include": "build/installer.nsh",
+      "runAfterFinish": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "appx": {
+      "applicationId": "CascadeExplorer",
+      "backgroundColor": "#0d0b18",
+      "displayName": "Cascade",
+      "identityName": "Idan4956.Cascade",
+      "publisher": "CN=Idan4956",
+      "publisherDisplayName": "Idan4956",
+      "languages": ["en-US"],
+      "addAutoLaunchExtension": false,
+      "showNameOnTiles": true
+    },
+    "fileAssociations": [
+      {
+        "ext": ["zip", "7z"],
+        "name": "Archive",
+        "description": "Open archive in Cascade Explorer",
+        "role": "Viewer"
+      },
+      {
+        "ext": ["jpg", "jpeg", "png", "gif", "webp"],
+        "name": "Image",
+        "description": "Preview image in Cascade Explorer",
+        "role": "Viewer"
+      }
+    ],
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.utilities",
+      "icon": "resources/icon.png"
+    },
+    "linux": {
+      "target": "AppImage",
+      "category": "Utility",
+      "icon": "resources/icon.png"
+    }
+  }
+}
+
