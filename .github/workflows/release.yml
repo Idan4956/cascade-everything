@@ -37,13 +37,13 @@ jobs:
           $bin  = "$dest\app-builder.exe"
           Write-Host "app-builder-bin version: $v"
           Write-Host "Binary path: $bin"
-          if (Test-Path $bin) { Write-Host "Binary already present"; exit 0 }
+          if ((Test-Path $bin) -and (Get-Item $bin).Length -gt 0) { Write-Host "Binary already present"; exit 0 }
           New-Item -ItemType Directory -Force $dest | Out-Null
           Write-Host "Downloading tarball..."
           curl.exe -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-$v.tgz" -o "$env:TEMP\ab.tgz"
           Write-Host "Extracting..."
           tar -xzOf "$env:TEMP\ab.tgz" "package/win/x64/app-builder.exe" > $bin
-          if (!(Test-Path $bin)) { Write-Host "ERROR: binary still missing"; exit 1 }
+          if (!(Test-Path $bin) -or (Get-Item $bin).Length -eq 0) { Write-Host "ERROR: binary missing or empty"; exit 1 }
           Write-Host "Done: $(Get-Item $bin)"
       - run: npm run build
         working-directory: apps/explorer
@@ -87,7 +87,7 @@ jobs:
           BIN="$DEST/app-builder_${ARCH}"
           echo "app-builder-bin version: $VER  arch: $ARCH"
           echo "Binary path: $BIN"
-          if [ -f "$BIN" ]; then echo "Binary already present"; exit 0; fi
+          if [ -s "$BIN" ]; then echo "Binary already present"; exit 0; fi
           mkdir -p "$DEST"
           echo "Downloading tarball..."
           curl -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-${VER}.tgz" -o /tmp/ab.tgz
@@ -134,7 +134,7 @@ jobs:
           BIN="$DEST/app-builder"
           echo "app-builder-bin version: $VER"
           echo "Binary path: $BIN"
-          if [ -f "$BIN" ]; then echo "Binary already present"; exit 0; fi
+          if [ -s "$BIN" ]; then echo "Binary already present"; exit 0; fi
           mkdir -p "$DEST"
           echo "Downloading tarball..."
           curl -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-${VER}.tgz" -o /tmp/ab.tgz
@@ -184,11 +184,11 @@ jobs:
           $dest = "node_modules\app-builder-bin\win\x64"
           $bin  = "$dest\app-builder.exe"
           Write-Host "app-builder-bin version: $v"
-          if (Test-Path $bin) { Write-Host "Binary already present"; exit 0 }
+          if ((Test-Path $bin) -and (Get-Item $bin).Length -gt 0) { Write-Host "Binary already present"; exit 0 }
           New-Item -ItemType Directory -Force $dest | Out-Null
           curl.exe -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-$v.tgz" -o "$env:TEMP\ab.tgz"
           tar -xzOf "$env:TEMP\ab.tgz" "package/win/x64/app-builder.exe" > $bin
-          if (!(Test-Path $bin)) { Write-Host "ERROR: binary still missing"; exit 1 }
+          if (!(Test-Path $bin) -or (Get-Item $bin).Length -eq 0) { Write-Host "ERROR: binary missing or empty"; exit 1 }
           Write-Host "Done: $(Get-Item $bin)"
       - run: npm run build
         working-directory: apps/photos
@@ -228,7 +228,7 @@ jobs:
           DEST="node_modules/app-builder-bin/mac"
           BIN="$DEST/app-builder_${ARCH}"
           echo "app-builder-bin version: $VER  arch: $ARCH"
-          if [ -f "$BIN" ]; then echo "Binary already present"; exit 0; fi
+          if [ -s "$BIN" ]; then echo "Binary already present"; exit 0; fi
           mkdir -p "$DEST"
           echo "Downloading tarball..."
           curl -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-${VER}.tgz" -o /tmp/ab.tgz
@@ -272,7 +272,7 @@ jobs:
           DEST="node_modules/app-builder-bin/linux/x64"
           BIN="$DEST/app-builder"
           echo "app-builder-bin version: $VER"
-          if [ -f "$BIN" ]; then echo "Binary already present"; exit 0; fi
+          if [ -s "$BIN" ]; then echo "Binary already present"; exit 0; fi
           mkdir -p "$DEST"
           echo "Downloading tarball..."
           curl -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-${VER}.tgz" -o /tmp/ab.tgz
