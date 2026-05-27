@@ -32,16 +32,13 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-          $v    = (node -p "require('./node_modules/app-builder-bin/package.json').version").Trim()
-          $dest = "node_modules\app-builder-bin\win\x64"
-          $bin  = "$dest\app-builder.exe"
-          New-Item -ItemType Directory -Force $dest | Out-Null
+          $v   = (node -p "require('./node_modules/app-builder-bin/package.json').version").Trim()
+          $tmp = "$env:TEMP\app-builder.exe"
           curl.exe -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-$v.tgz" -o "$env:TEMP\ab.tgz"
-          tar -xzOf "$env:TEMP\ab.tgz" "package/win/x64/app-builder.exe" > $bin
-          if (!(Test-Path $bin) -or (Get-Item $bin).Length -eq 0) { Write-Host "ERROR: binary missing or empty"; exit 1 }
-          Write-Host "Done: $(Get-Item $bin)"
-          $absPath = (Resolve-Path $bin).Path
-          echo "APP_BUILDER_BIN=$absPath" >> $env:GITHUB_ENV
+          tar -xzOf "$env:TEMP\ab.tgz" "package/win/x64/app-builder.exe" > $tmp
+          if (!(Test-Path $tmp) -or (Get-Item $tmp).Length -eq 0) { Write-Host "ERROR: binary missing or empty"; exit 1 }
+          Write-Host "Done: $(Get-Item $tmp)"
+          echo "APP_BUILDER_BIN=$tmp" >> $env:GITHUB_ENV
       - run: npm run build
         working-directory: apps/explorer
       - name: Build NSIS installer
@@ -80,18 +77,12 @@ jobs:
           set -e
           VER=$(node -p "require('./node_modules/app-builder-bin/package.json').version")
           ARCH=$(node -p "process.arch === 'x64' ? 'amd64' : process.arch")
-          DEST="node_modules/app-builder-bin/mac"
-          BIN="$DEST/app-builder_${ARCH}"
-          mkdir -p "$DEST"
           curl -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-${VER}.tgz" -o /tmp/ab.tgz
-          tar -xzOf /tmp/ab.tgz "package/mac/app-builder_${ARCH}" > "$BIN"
-          chmod +x "$BIN"
-          ls -lh "$BIN"
-          file "$BIN"
-          xattr -l "$BIN" 2>/dev/null || true
-          "$BIN" --version 2>&1 || echo "WARNING: direct run failed with exit $?"
-          ABS_BIN=$(realpath "$BIN")
-          echo "APP_BUILDER_BIN=$ABS_BIN" >> $GITHUB_ENV
+          tar -xzOf /tmp/ab.tgz "package/mac/app-builder_${ARCH}" > /tmp/app-builder
+          chmod +x /tmp/app-builder
+          ls -lh /tmp/app-builder
+          /tmp/app-builder --version
+          echo "APP_BUILDER_BIN=/tmp/app-builder" >> $GITHUB_ENV
       - run: npm run build
         working-directory: apps/explorer
       - run: npx electron-builder --mac dmg --publish=never
@@ -127,15 +118,11 @@ jobs:
         run: |
           set -e
           VER=$(node -p "require('./node_modules/app-builder-bin/package.json').version")
-          DEST="node_modules/app-builder-bin/linux/x64"
-          BIN="$DEST/app-builder"
-          mkdir -p "$DEST"
           curl -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-${VER}.tgz" -o /tmp/ab.tgz
-          tar -xzOf /tmp/ab.tgz "package/linux/x64/app-builder" > "$BIN"
-          chmod +x "$BIN"
-          ls -lh "$BIN"
-          ABS_BIN=$(realpath "$BIN")
-          echo "APP_BUILDER_BIN=$ABS_BIN" >> $GITHUB_ENV
+          tar -xzOf /tmp/ab.tgz "package/linux/x64/app-builder" > /tmp/app-builder
+          chmod +x /tmp/app-builder
+          ls -lh /tmp/app-builder
+          echo "APP_BUILDER_BIN=/tmp/app-builder" >> $GITHUB_ENV
       - run: sudo apt-get install -y rpm fakeroot
       - run: npm run build
         working-directory: apps/explorer
@@ -174,16 +161,13 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-          $v    = (node -p "require('./node_modules/app-builder-bin/package.json').version").Trim()
-          $dest = "node_modules\app-builder-bin\win\x64"
-          $bin  = "$dest\app-builder.exe"
-          New-Item -ItemType Directory -Force $dest | Out-Null
+          $v   = (node -p "require('./node_modules/app-builder-bin/package.json').version").Trim()
+          $tmp = "$env:TEMP\app-builder.exe"
           curl.exe -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-$v.tgz" -o "$env:TEMP\ab.tgz"
-          tar -xzOf "$env:TEMP\ab.tgz" "package/win/x64/app-builder.exe" > $bin
-          if (!(Test-Path $bin) -or (Get-Item $bin).Length -eq 0) { Write-Host "ERROR: binary missing or empty"; exit 1 }
-          Write-Host "Done: $(Get-Item $bin)"
-          $absPath = (Resolve-Path $bin).Path
-          echo "APP_BUILDER_BIN=$absPath" >> $env:GITHUB_ENV
+          tar -xzOf "$env:TEMP\ab.tgz" "package/win/x64/app-builder.exe" > $tmp
+          if (!(Test-Path $tmp) -or (Get-Item $tmp).Length -eq 0) { Write-Host "ERROR: binary missing or empty"; exit 1 }
+          Write-Host "Done: $(Get-Item $tmp)"
+          echo "APP_BUILDER_BIN=$tmp" >> $env:GITHUB_ENV
       - run: npm run build
         working-directory: apps/photos
       - run: npx electron-builder --win nsis --publish=never
@@ -219,15 +203,12 @@ jobs:
           set -e
           VER=$(node -p "require('./node_modules/app-builder-bin/package.json').version")
           ARCH=$(node -p "process.arch === 'x64' ? 'amd64' : process.arch")
-          DEST="node_modules/app-builder-bin/mac"
-          BIN="$DEST/app-builder_${ARCH}"
-          mkdir -p "$DEST"
           curl -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-${VER}.tgz" -o /tmp/ab.tgz
-          tar -xzOf /tmp/ab.tgz "package/mac/app-builder_${ARCH}" > "$BIN"
-          chmod +x "$BIN"
-          ls -lh "$BIN"
-          ABS_BIN=$(realpath "$BIN")
-          echo "APP_BUILDER_BIN=$ABS_BIN" >> $GITHUB_ENV
+          tar -xzOf /tmp/ab.tgz "package/mac/app-builder_${ARCH}" > /tmp/app-builder
+          chmod +x /tmp/app-builder
+          ls -lh /tmp/app-builder
+          /tmp/app-builder --version
+          echo "APP_BUILDER_BIN=/tmp/app-builder" >> $GITHUB_ENV
       - run: npm run build
         working-directory: apps/photos
       - run: npx electron-builder --mac dmg --publish=never
@@ -261,15 +242,11 @@ jobs:
         run: |
           set -e
           VER=$(node -p "require('./node_modules/app-builder-bin/package.json').version")
-          DEST="node_modules/app-builder-bin/linux/x64"
-          BIN="$DEST/app-builder"
-          mkdir -p "$DEST"
           curl -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-${VER}.tgz" -o /tmp/ab.tgz
-          tar -xzOf /tmp/ab.tgz "package/linux/x64/app-builder" > "$BIN"
-          chmod +x "$BIN"
-          ls -lh "$BIN"
-          ABS_BIN=$(realpath "$BIN")
-          echo "APP_BUILDER_BIN=$ABS_BIN" >> $GITHUB_ENV
+          tar -xzOf /tmp/ab.tgz "package/linux/x64/app-builder" > /tmp/app-builder
+          chmod +x /tmp/app-builder
+          ls -lh /tmp/app-builder
+          echo "APP_BUILDER_BIN=/tmp/app-builder" >> $GITHUB_ENV
       - run: sudo apt-get install -y rpm fakeroot
       - run: npm run build
         working-directory: apps/photos
