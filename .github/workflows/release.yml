@@ -87,12 +87,13 @@ jobs:
           BIN="$DEST/app-builder_${ARCH}"
           echo "app-builder-bin version: $VER  arch: $ARCH"
           echo "Binary path: $BIN"
-          if [ -s "$BIN" ]; then echo "Binary already present"; exit 0; fi
-          mkdir -p "$DEST"
-          echo "Downloading tarball..."
-          curl -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-${VER}.tgz" -o /tmp/ab.tgz
-          echo "Extracting..."
-          tar -xzOf /tmp/ab.tgz "package/mac/app-builder_${ARCH}" > "$BIN"
+          if [ ! -s "$BIN" ]; then
+            mkdir -p "$DEST"
+            echo "Downloading tarball..."
+            curl -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-${VER}.tgz" -o /tmp/ab.tgz
+            echo "Extracting..."
+            tar -xzOf /tmp/ab.tgz "package/mac/app-builder_${ARCH}" > "$BIN"
+          fi
           chmod +x "$BIN"
           echo "Done: $(ls -lh "$BIN")"
       - run: npm run build
@@ -134,12 +135,13 @@ jobs:
           BIN="$DEST/app-builder"
           echo "app-builder-bin version: $VER"
           echo "Binary path: $BIN"
-          if [ -s "$BIN" ]; then echo "Binary already present"; exit 0; fi
-          mkdir -p "$DEST"
-          echo "Downloading tarball..."
-          curl -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-${VER}.tgz" -o /tmp/ab.tgz
-          echo "Extracting..."
-          tar -xzOf /tmp/ab.tgz "package/linux/x64/app-builder" > "$BIN"
+          if [ ! -s "$BIN" ]; then
+            mkdir -p "$DEST"
+            echo "Downloading tarball..."
+            curl -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-${VER}.tgz" -o /tmp/ab.tgz
+            echo "Extracting..."
+            tar -xzOf /tmp/ab.tgz "package/linux/x64/app-builder" > "$BIN"
+          fi
           chmod +x "$BIN"
           echo "Done: $(ls -lh "$BIN")"
       - run: sudo apt-get install -y rpm fakeroot
@@ -228,12 +230,13 @@ jobs:
           DEST="node_modules/app-builder-bin/mac"
           BIN="$DEST/app-builder_${ARCH}"
           echo "app-builder-bin version: $VER  arch: $ARCH"
-          if [ -s "$BIN" ]; then echo "Binary already present"; exit 0; fi
-          mkdir -p "$DEST"
-          echo "Downloading tarball..."
-          curl -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-${VER}.tgz" -o /tmp/ab.tgz
-          echo "Extracting..."
-          tar -xzOf /tmp/ab.tgz "package/mac/app-builder_${ARCH}" > "$BIN"
+          if [ ! -s "$BIN" ]; then
+            mkdir -p "$DEST"
+            echo "Downloading tarball..."
+            curl -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-${VER}.tgz" -o /tmp/ab.tgz
+            echo "Extracting..."
+            tar -xzOf /tmp/ab.tgz "package/mac/app-builder_${ARCH}" > "$BIN"
+          fi
           chmod +x "$BIN"
           echo "Done: $(ls -lh "$BIN")"
       - run: npm run build
@@ -272,12 +275,13 @@ jobs:
           DEST="node_modules/app-builder-bin/linux/x64"
           BIN="$DEST/app-builder"
           echo "app-builder-bin version: $VER"
-          if [ -s "$BIN" ]; then echo "Binary already present"; exit 0; fi
-          mkdir -p "$DEST"
-          echo "Downloading tarball..."
-          curl -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-${VER}.tgz" -o /tmp/ab.tgz
-          echo "Extracting..."
-          tar -xzOf /tmp/ab.tgz "package/linux/x64/app-builder" > "$BIN"
+          if [ ! -s "$BIN" ]; then
+            mkdir -p "$DEST"
+            echo "Downloading tarball..."
+            curl -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-${VER}.tgz" -o /tmp/ab.tgz
+            echo "Extracting..."
+            tar -xzOf /tmp/ab.tgz "package/linux/x64/app-builder" > "$BIN"
+          fi
           chmod +x "$BIN"
           echo "Done: $(ls -lh "$BIN")"
       - run: sudo apt-get install -y rpm fakeroot
