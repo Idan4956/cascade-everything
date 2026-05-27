@@ -85,6 +85,9 @@ jobs:
           tar -xzOf /tmp/ab.tgz "package/mac/app-builder_${ARCH}" > "$BIN"
           chmod +x "$BIN"
           ls -lh "$BIN"
+          file "$BIN"
+          xattr -l "$BIN" 2>/dev/null || true
+          "$BIN" --version 2>&1 || echo "WARNING: direct run failed with exit $?"
       - run: npm run build
         working-directory: apps/explorer
       - run: npx electron-builder --mac dmg --publish=never
