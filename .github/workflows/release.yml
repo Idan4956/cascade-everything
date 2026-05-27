@@ -38,6 +38,14 @@ jobs:
           tar -xzOf "$env:TEMP\ab.tgz" "package/win/x64/app-builder.exe" > $tmp
           if (!(Test-Path $tmp) -or (Get-Item $tmp).Length -eq 0) { Write-Host "ERROR: binary missing or empty"; exit 1 }
           Write-Host "Done: $(Get-Item $tmp)"
+          # Place at path electron-builder resolves via require("app-builder-bin")
+          $dest = "node_modules\app-builder-bin\win\x64"
+          New-Item -ItemType Directory -Force $dest | Out-Null
+          Copy-Item $tmp "$dest\app-builder.exe" -Force
+          # Strip postinstall so npm can't re-run it and overwrite our binary
+          $pkg = Get-Content "node_modules\app-builder-bin\package.json" -Raw | ConvertFrom-Json
+          $pkg.PSObject.Properties.Remove("scripts")
+          $pkg | ConvertTo-Json -Depth 10 | Set-Content "node_modules\app-builder-bin\package.json"
           echo "APP_BUILDER_BIN=$tmp" >> $env:GITHUB_ENV
       - run: npm run build
         working-directory: apps/explorer
@@ -78,10 +86,22 @@ jobs:
           VER=$(node -p "require('./node_modules/app-builder-bin/package.json').version")
           ARCH=$(node -p "process.arch === 'x64' ? 'amd64' : process.arch")
           curl -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-${VER}.tgz" -o /tmp/ab.tgz
+          # Extract to /tmp (untouchable by npm)
           tar -xzOf /tmp/ab.tgz "package/mac/app-builder_${ARCH}" > /tmp/app-builder
           chmod +x /tmp/app-builder
           ls -lh /tmp/app-builder
           /tmp/app-builder --version
+          # Place at path electron-builder resolves via require("app-builder-bin")
+          DEST="node_modules/app-builder-bin/mac"
+          mkdir -p "$DEST"
+          cp /tmp/app-builder "$DEST/app-builder_${ARCH}"
+          # Strip postinstall so npm can't re-run it and overwrite our binary
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('./node_modules/app-builder-bin/package.json', 'utf8'));
+            delete pkg.scripts;
+            fs.writeFileSync('./node_modules/app-builder-bin/package.json', JSON.stringify(pkg, null, 2));
+          "
           echo "APP_BUILDER_BIN=/tmp/app-builder" >> $GITHUB_ENV
       - run: npm run build
         working-directory: apps/explorer
@@ -122,6 +142,15 @@ jobs:
           tar -xzOf /tmp/ab.tgz "package/linux/x64/app-builder" > /tmp/app-builder
           chmod +x /tmp/app-builder
           ls -lh /tmp/app-builder
+          DEST="node_modules/app-builder-bin/linux/x64"
+          mkdir -p "$DEST"
+          cp /tmp/app-builder "$DEST/app-builder"
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('./node_modules/app-builder-bin/package.json', 'utf8'));
+            delete pkg.scripts;
+            fs.writeFileSync('./node_modules/app-builder-bin/package.json', JSON.stringify(pkg, null, 2));
+          "
           echo "APP_BUILDER_BIN=/tmp/app-builder" >> $GITHUB_ENV
       - run: sudo apt-get install -y rpm fakeroot
       - run: npm run build
@@ -167,6 +196,12 @@ jobs:
           tar -xzOf "$env:TEMP\ab.tgz" "package/win/x64/app-builder.exe" > $tmp
           if (!(Test-Path $tmp) -or (Get-Item $tmp).Length -eq 0) { Write-Host "ERROR: binary missing or empty"; exit 1 }
           Write-Host "Done: $(Get-Item $tmp)"
+          $dest = "node_modules\app-builder-bin\win\x64"
+          New-Item -ItemType Directory -Force $dest | Out-Null
+          Copy-Item $tmp "$dest\app-builder.exe" -Force
+          $pkg = Get-Content "node_modules\app-builder-bin\package.json" -Raw | ConvertFrom-Json
+          $pkg.PSObject.Properties.Remove("scripts")
+          $pkg | ConvertTo-Json -Depth 10 | Set-Content "node_modules\app-builder-bin\package.json"
           echo "APP_BUILDER_BIN=$tmp" >> $env:GITHUB_ENV
       - run: npm run build
         working-directory: apps/photos
@@ -208,6 +243,15 @@ jobs:
           chmod +x /tmp/app-builder
           ls -lh /tmp/app-builder
           /tmp/app-builder --version
+          DEST="node_modules/app-builder-bin/mac"
+          mkdir -p "$DEST"
+          cp /tmp/app-builder "$DEST/app-builder_${ARCH}"
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('./node_modules/app-builder-bin/package.json', 'utf8'));
+            delete pkg.scripts;
+            fs.writeFileSync('./node_modules/app-builder-bin/package.json', JSON.stringify(pkg, null, 2));
+          "
           echo "APP_BUILDER_BIN=/tmp/app-builder" >> $GITHUB_ENV
       - run: npm run build
         working-directory: apps/photos
@@ -246,6 +290,15 @@ jobs:
           tar -xzOf /tmp/ab.tgz "package/linux/x64/app-builder" > /tmp/app-builder
           chmod +x /tmp/app-builder
           ls -lh /tmp/app-builder
+          DEST="node_modules/app-builder-bin/linux/x64"
+          mkdir -p "$DEST"
+          cp /tmp/app-builder "$DEST/app-builder"
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('./node_modules/app-builder-bin/package.json', 'utf8'));
+            delete pkg.scripts;
+            fs.writeFileSync('./node_modules/app-builder-bin/package.json', JSON.stringify(pkg, null, 2));
+          "
           echo "APP_BUILDER_BIN=/tmp/app-builder" >> $GITHUB_ENV
       - run: sudo apt-get install -y rpm fakeroot
       - run: npm run build
