@@ -28,20 +28,15 @@ jobs:
         with:
           node-version: 20
       - run: npm install
-      - name: Ensure app-builder binary
+      - name: Install app-builder binary
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
           $v    = (node -p "require('./node_modules/app-builder-bin/package.json').version").Trim()
           $dest = "node_modules\app-builder-bin\win\x64"
           $bin  = "$dest\app-builder.exe"
-          Write-Host "app-builder-bin version: $v"
-          Write-Host "Binary path: $bin"
-          if ((Test-Path $bin) -and (Get-Item $bin).Length -gt 0) { Write-Host "Binary already present"; exit 0 }
           New-Item -ItemType Directory -Force $dest | Out-Null
-          Write-Host "Downloading tarball..."
           curl.exe -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-$v.tgz" -o "$env:TEMP\ab.tgz"
-          Write-Host "Extracting..."
           tar -xzOf "$env:TEMP\ab.tgz" "package/win/x64/app-builder.exe" > $bin
           if (!(Test-Path $bin) -or (Get-Item $bin).Length -eq 0) { Write-Host "ERROR: binary missing or empty"; exit 1 }
           Write-Host "Done: $(Get-Item $bin)"
@@ -78,24 +73,18 @@ jobs:
         with:
           node-version: 20
       - run: npm install
-      - name: Ensure app-builder binary
+      - name: Install app-builder binary
         run: |
           set -e
           VER=$(node -p "require('./node_modules/app-builder-bin/package.json').version")
           ARCH=$(node -p "process.arch === 'x64' ? 'amd64' : process.arch")
           DEST="node_modules/app-builder-bin/mac"
           BIN="$DEST/app-builder_${ARCH}"
-          echo "app-builder-bin version: $VER  arch: $ARCH"
-          echo "Binary path: $BIN"
-          if [ ! -s "$BIN" ]; then
-            mkdir -p "$DEST"
-            echo "Downloading tarball..."
-            curl -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-${VER}.tgz" -o /tmp/ab.tgz
-            echo "Extracting..."
-            tar -xzOf /tmp/ab.tgz "package/mac/app-builder_${ARCH}" > "$BIN"
-          fi
+          mkdir -p "$DEST"
+          curl -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-${VER}.tgz" -o /tmp/ab.tgz
+          tar -xzOf /tmp/ab.tgz "package/mac/app-builder_${ARCH}" > "$BIN"
           chmod +x "$BIN"
-          echo "Done: $(ls -lh "$BIN")"
+          ls -lh "$BIN"
       - run: npm run build
         working-directory: apps/explorer
       - run: npx electron-builder --mac dmg --publish=never
@@ -127,23 +116,17 @@ jobs:
         with:
           node-version: 20
       - run: npm install
-      - name: Ensure app-builder binary
+      - name: Install app-builder binary
         run: |
           set -e
           VER=$(node -p "require('./node_modules/app-builder-bin/package.json').version")
           DEST="node_modules/app-builder-bin/linux/x64"
           BIN="$DEST/app-builder"
-          echo "app-builder-bin version: $VER"
-          echo "Binary path: $BIN"
-          if [ ! -s "$BIN" ]; then
-            mkdir -p "$DEST"
-            echo "Downloading tarball..."
-            curl -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-${VER}.tgz" -o /tmp/ab.tgz
-            echo "Extracting..."
-            tar -xzOf /tmp/ab.tgz "package/linux/x64/app-builder" > "$BIN"
-          fi
+          mkdir -p "$DEST"
+          curl -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-${VER}.tgz" -o /tmp/ab.tgz
+          tar -xzOf /tmp/ab.tgz "package/linux/x64/app-builder" > "$BIN"
           chmod +x "$BIN"
-          echo "Done: $(ls -lh "$BIN")"
+          ls -lh "$BIN"
       - run: sudo apt-get install -y rpm fakeroot
       - run: npm run build
         working-directory: apps/explorer
@@ -178,15 +161,13 @@ jobs:
         with:
           node-version: 20
       - run: npm install
-      - name: Ensure app-builder binary
+      - name: Install app-builder binary
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
           $v    = (node -p "require('./node_modules/app-builder-bin/package.json').version").Trim()
           $dest = "node_modules\app-builder-bin\win\x64"
           $bin  = "$dest\app-builder.exe"
-          Write-Host "app-builder-bin version: $v"
-          if ((Test-Path $bin) -and (Get-Item $bin).Length -gt 0) { Write-Host "Binary already present"; exit 0 }
           New-Item -ItemType Directory -Force $dest | Out-Null
           curl.exe -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-$v.tgz" -o "$env:TEMP\ab.tgz"
           tar -xzOf "$env:TEMP\ab.tgz" "package/win/x64/app-builder.exe" > $bin
@@ -222,23 +203,18 @@ jobs:
         with:
           node-version: 20
       - run: npm install
-      - name: Ensure app-builder binary
+      - name: Install app-builder binary
         run: |
           set -e
           VER=$(node -p "require('./node_modules/app-builder-bin/package.json').version")
           ARCH=$(node -p "process.arch === 'x64' ? 'amd64' : process.arch")
           DEST="node_modules/app-builder-bin/mac"
           BIN="$DEST/app-builder_${ARCH}"
-          echo "app-builder-bin version: $VER  arch: $ARCH"
-          if [ ! -s "$BIN" ]; then
-            mkdir -p "$DEST"
-            echo "Downloading tarball..."
-            curl -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-${VER}.tgz" -o /tmp/ab.tgz
-            echo "Extracting..."
-            tar -xzOf /tmp/ab.tgz "package/mac/app-builder_${ARCH}" > "$BIN"
-          fi
+          mkdir -p "$DEST"
+          curl -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-${VER}.tgz" -o /tmp/ab.tgz
+          tar -xzOf /tmp/ab.tgz "package/mac/app-builder_${ARCH}" > "$BIN"
           chmod +x "$BIN"
-          echo "Done: $(ls -lh "$BIN")"
+          ls -lh "$BIN"
       - run: npm run build
         working-directory: apps/photos
       - run: npx electron-builder --mac dmg --publish=never
@@ -268,22 +244,17 @@ jobs:
         with:
           node-version: 20
       - run: npm install
-      - name: Ensure app-builder binary
+      - name: Install app-builder binary
         run: |
           set -e
           VER=$(node -p "require('./node_modules/app-builder-bin/package.json').version")
           DEST="node_modules/app-builder-bin/linux/x64"
           BIN="$DEST/app-builder"
-          echo "app-builder-bin version: $VER"
-          if [ ! -s "$BIN" ]; then
-            mkdir -p "$DEST"
-            echo "Downloading tarball..."
-            curl -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-${VER}.tgz" -o /tmp/ab.tgz
-            echo "Extracting..."
-            tar -xzOf /tmp/ab.tgz "package/linux/x64/app-builder" > "$BIN"
-          fi
+          mkdir -p "$DEST"
+          curl -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-${VER}.tgz" -o /tmp/ab.tgz
+          tar -xzOf /tmp/ab.tgz "package/linux/x64/app-builder" > "$BIN"
           chmod +x "$BIN"
-          echo "Done: $(ls -lh "$BIN")"
+          ls -lh "$BIN"
       - run: sudo apt-get install -y rpm fakeroot
       - run: npm run build
         working-directory: apps/photos
