@@ -40,6 +40,8 @@ jobs:
           tar -xzOf "$env:TEMP\ab.tgz" "package/win/x64/app-builder.exe" > $bin
           if (!(Test-Path $bin) -or (Get-Item $bin).Length -eq 0) { Write-Host "ERROR: binary missing or empty"; exit 1 }
           Write-Host "Done: $(Get-Item $bin)"
+          $absPath = (Resolve-Path $bin).Path
+          echo "APP_BUILDER_BIN=$absPath" >> $env:GITHUB_ENV
       - run: npm run build
         working-directory: apps/explorer
       - name: Build NSIS installer
@@ -88,6 +90,8 @@ jobs:
           file "$BIN"
           xattr -l "$BIN" 2>/dev/null || true
           "$BIN" --version 2>&1 || echo "WARNING: direct run failed with exit $?"
+          ABS_BIN=$(realpath "$BIN")
+          echo "APP_BUILDER_BIN=$ABS_BIN" >> $GITHUB_ENV
       - run: npm run build
         working-directory: apps/explorer
       - run: npx electron-builder --mac dmg --publish=never
@@ -130,6 +134,8 @@ jobs:
           tar -xzOf /tmp/ab.tgz "package/linux/x64/app-builder" > "$BIN"
           chmod +x "$BIN"
           ls -lh "$BIN"
+          ABS_BIN=$(realpath "$BIN")
+          echo "APP_BUILDER_BIN=$ABS_BIN" >> $GITHUB_ENV
       - run: sudo apt-get install -y rpm fakeroot
       - run: npm run build
         working-directory: apps/explorer
@@ -176,6 +182,8 @@ jobs:
           tar -xzOf "$env:TEMP\ab.tgz" "package/win/x64/app-builder.exe" > $bin
           if (!(Test-Path $bin) -or (Get-Item $bin).Length -eq 0) { Write-Host "ERROR: binary missing or empty"; exit 1 }
           Write-Host "Done: $(Get-Item $bin)"
+          $absPath = (Resolve-Path $bin).Path
+          echo "APP_BUILDER_BIN=$absPath" >> $env:GITHUB_ENV
       - run: npm run build
         working-directory: apps/photos
       - run: npx electron-builder --win nsis --publish=never
@@ -218,6 +226,8 @@ jobs:
           tar -xzOf /tmp/ab.tgz "package/mac/app-builder_${ARCH}" > "$BIN"
           chmod +x "$BIN"
           ls -lh "$BIN"
+          ABS_BIN=$(realpath "$BIN")
+          echo "APP_BUILDER_BIN=$ABS_BIN" >> $GITHUB_ENV
       - run: npm run build
         working-directory: apps/photos
       - run: npx electron-builder --mac dmg --publish=never
@@ -258,6 +268,8 @@ jobs:
           tar -xzOf /tmp/ab.tgz "package/linux/x64/app-builder" > "$BIN"
           chmod +x "$BIN"
           ls -lh "$BIN"
+          ABS_BIN=$(realpath "$BIN")
+          echo "APP_BUILDER_BIN=$ABS_BIN" >> $GITHUB_ENV
       - run: sudo apt-get install -y rpm fakeroot
       - run: npm run build
         working-directory: apps/photos
