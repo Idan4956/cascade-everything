@@ -4,7 +4,7 @@ import fs from 'fs'
 import https from 'https'
 import os from 'os'
 import path from 'path'
-import { exec } from 'child_process'
+import { exec, spawn } from 'child_process'
 import { promisify } from 'util'
 import AdmZip from 'adm-zip'
 import Anthropic from '@anthropic-ai/sdk'
@@ -358,6 +358,42 @@ ipcMain.handle('fs:openExternal', async (_, filePath) => {
   } catch (err) {
     return { error: err.message }
   }
+})
+
+function findCascadePhotos() {
+  const home = os.homedir()
+  let candidates = []
+  if (process.platform === 'win32') {
+    candidates = [
+      path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Cascade Photos', 'Cascade Photos.exe'),
+      path.join(process.env.PROGRAMFILES || '', 'Cascade Photos', 'Cascade Photos.exe'),
+    ]
+  } else if (process.platform === 'darwin') {
+    candidates = [
+      '/Applications/Cascade Photos.app/Contents/MacOS/Cascade Photos',
+      path.join(home, 'Applications', 'Cascade Photos.app', 'Contents', 'MacOS', 'Cascade Photos'),
+    ]
+  } else {
+    candidates = [
+      path.join(home, 'Applications', 'Cascade-Photos-linux.AppImage'),
+      path.join(home, 'Downloads', 'Cascade-Photos-linux.AppImage'),
+      '/opt/Cascade-Photos-linux.AppImage',
+    ]
+  }
+  return candidates.find(c => { try { return fs.statSync(c).isFile() } catch { return false } }) || null
+}
+
+ipcMain.handle('app:openInPhotos', async (_, filePath) => {
+  const photosExe = findCascadePhotos()
+  if (photosExe) {
+    try {
+      spawn(photosExe, [filePath], { detached: true }).unref()
+      return { ok: true }
+    } catch {}
+  }
+  // Fall back to system default opener
+  await shell.openPath(filePath)
+  return { ok: true, fallback: true }
 })
 
 ipcMain.handle('fs:showInFolder', async (_, filePath) => {

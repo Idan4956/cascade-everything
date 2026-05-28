@@ -82,6 +82,14 @@ export default function CascadeDeepPreview({ item, accent, tagMap, onToggleTag, 
           onClick={() => window.electronAPI?.showInFolder(item.path)} />
         <PvAction icon={<IconCopy size={13} />} accent={accent}
           onClick={() => navigator.clipboard?.writeText(item.path)} />
+        {item.kind === 'image' && (
+          <PvAction
+            icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>}
+            label="Photos"
+            accent={accent}
+            onClick={() => window.electronAPI?.openInPhotos(item.path)}
+          />
+        )}
         <PvAction icon={<IconMore size={13} />} accent={accent} />
       </div>
 

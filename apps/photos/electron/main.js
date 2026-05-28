@@ -1,7 +1,9 @@
 import { app, BrowserWindow, ipcMain, dialog, protocol, net, shell } from 'electron'
 import { join } from 'path'
+import { spawn } from 'child_process'
 import fs from 'fs'
 import path from 'path'
+import os from 'os'
 
 const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.tif', '.avif'])
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
@@ -15,6 +17,30 @@ function getLaunchPath() {
     }
   }
   return null
+}
+
+function findCascadeExplorer() {
+  const p = process.platform
+  const home = os.homedir()
+  let candidates = []
+  if (p === 'win32') {
+    candidates = [
+      path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Cascade', 'Cascade.exe'),
+      path.join(process.env.PROGRAMFILES || '', 'Cascade', 'Cascade.exe'),
+    ]
+  } else if (p === 'darwin') {
+    candidates = [
+      '/Applications/Cascade.app/Contents/MacOS/Cascade',
+      path.join(home, 'Applications', 'Cascade.app', 'Contents', 'MacOS', 'Cascade'),
+    ]
+  } else {
+    candidates = [
+      path.join(home, 'Applications', 'Cascade-Explorer-linux.AppImage'),
+      path.join(home, 'Downloads', 'Cascade-Explorer-linux.AppImage'),
+      '/opt/Cascade-Explorer-linux.AppImage',
+    ]
+  }
+  return candidates.find(c => { try { return fs.statSync(c).isFile() } catch { return false } }) || null
 }
 
 function createWindow() {
@@ -51,7 +77,6 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
-  // Serve local image files via cascade-img:// protocol
   protocol.handle('cascade-img', (request) => {
     const filePath = decodeURIComponent(request.url.slice('cascade-img://'.length))
     return net.fetch('file:///' + filePath)
@@ -68,6 +93,15 @@ ipcMain.handle('photos:openDialog', async (_, startPath) => {
   const result = await dialog.showOpenDialog(mainWin, {
     defaultPath: startPath || app.getPath('pictures'),
     properties: ['openDirectory'],
+  })
+  return result.filePaths[0] || null
+})
+
+ipcMain.handle('photos:openFileDialog', async (_, startPath) => {
+  const result = await dialog.showOpenDialog(mainWin, {
+    defaultPath: startPath || app.getPath('pictures'),
+    properties: ['openFile'],
+    filters: [{ name: 'Images', extensions: ['jpg','jpeg','png','gif','webp','bmp','tiff','tif','avif'] }],
   })
   return result.filePaths[0] || null
 })
@@ -94,6 +128,40 @@ ipcMain.handle('photos:listDir', (_, dirPath) => {
 ipcMain.handle('photos:parentDir', (_, dirPath) => path.dirname(dirPath))
 
 ipcMain.handle('photos:openExternal', (_, filePath) => shell.showItemInFolder(filePath))
+
+// ── IPC: inter-app ────────────────────────────────────────────────────────────
+
+ipcMain.handle('photos:openInExplorer', async (_, filePath) => {
+  const explorerPath = findCascadeExplorer()
+  if (explorerPath) {
+    try {
+      spawn(explorerPath, [path.dirname(filePath)], { detached: true }).unref()
+      return { ok: true }
+    } catch {}
+  }
+  shell.showItemInFolder(filePath)
+  return { ok: true, fallback: true }
+})
+
+// ── IPC: image conversion ─────────────────────────────────────────────────────
+
+ipcMain.handle('photos:saveDialog', async (_, { defaultName, ext }) => {
+  const extMap = { jpg: 'JPEG', jpeg: 'JPEG', png: 'PNG', webp: 'WebP' }
+  const result = await dialog.showSaveDialog(mainWin, {
+    defaultPath: defaultName,
+    filters: [{ name: extMap[ext] || ext.toUpperCase(), extensions: [ext] }],
+  })
+  return result.filePath || null
+})
+
+ipcMain.handle('photos:saveConverted', async (_, { buffer, outputPath }) => {
+  try {
+    fs.writeFileSync(outputPath, Buffer.from(buffer))
+    return { ok: true }
+  } catch (e) {
+    return { ok: false, error: e.message }
+  }
+})
 
 // ── IPC: window controls ──────────────────────────────────────────────────────
 

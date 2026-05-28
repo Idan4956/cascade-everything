@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   copy: (srcPath, destPath) => ipcRenderer.invoke('fs:copy', srcPath, destPath),
   openExternal: (filePath) => ipcRenderer.invoke('fs:openExternal', filePath),
   showInFolder: (filePath) => ipcRenderer.invoke('fs:showInFolder', filePath),
+  openInPhotos: (filePath) => ipcRenderer.invoke('app:openInPhotos', filePath),
   openDialog: (opts) => ipcRenderer.invoke('fs:openDialog', opts),
   getAllTags: () => ipcRenderer.invoke('tags:getAll'),
   setTags: (filePath, tagIds) => ipcRenderer.invoke('tags:set', filePath, tagIds),

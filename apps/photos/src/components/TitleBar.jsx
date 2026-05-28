@@ -1,7 +1,7 @@
 import React from 'react'
 import { basename } from '../utils.js'
 
-export default function TitleBar({ folder, imageCount, onOpenFolder, inViewer, onBackToGallery, currentImage }) {
+export default function TitleBar({ folder, imageCount, onOpenFolder, onOpenFile, inViewer, onBackToGallery, currentImage }) {
   return (
     <div style={{
       height: 44,
@@ -54,6 +54,13 @@ export default function TitleBar({ folder, imageCount, onOpenFolder, inViewer, o
             <path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h2.764c.958 0 1.76.56 2.311 1.184C7.985 3.648 8.48 4 9 4h4.5A1.5 1.5 0 0 1 15 5.5v7a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 12.5z"/>
           </svg>
         </BarBtn>
+        {onOpenFile && (
+          <BarBtn onClick={onOpenFile} title="Open image file">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/>
+            </svg>
+          </BarBtn>
+        )}
         <div style={{ width: 1, background: 'var(--border)', margin: '8px 2px' }} />
         <WinBtn onClick={() => window.photosAPI.minimize()} color="#ffbd2e" title="Minimise" />
         <WinBtn onClick={() => window.photosAPI.maximize()} color="#27c93f" title="Maximise" />

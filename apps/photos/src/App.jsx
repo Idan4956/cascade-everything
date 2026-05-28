@@ -74,6 +74,17 @@ export default function App() {
     if (p) loadFolder(p)
   }
 
+  const openFile = async () => {
+    const p = await window.photosAPI.openFileDialog(folder)
+    if (!p) return
+    const parent = await window.photosAPI.parentDir(p)
+    const parentImgs = await window.photosAPI.listDir(parent)
+    const idx = parentImgs.findIndex(img => img.fullPath === p)
+    setFolder(parent)
+    setImages(parentImgs)
+    setViewerIndex(idx >= 0 ? idx : 0)
+  }
+
   return (
     <>
       <style>{styles}</style>
@@ -82,6 +93,7 @@ export default function App() {
           folder={folder}
           imageCount={images.length}
           onOpenFolder={openFolder}
+          onOpenFile={openFile}
           inViewer={viewerIndex !== null}
           onBackToGallery={() => setViewerIndex(null)}
           currentImage={viewerIndex !== null ? images[viewerIndex] : null}
@@ -98,6 +110,7 @@ export default function App() {
             images={images}
             folder={folder}
             onOpenFolder={openFolder}
+            onOpenFile={openFile}
             onSelect={setViewerIndex}
           />
         )}

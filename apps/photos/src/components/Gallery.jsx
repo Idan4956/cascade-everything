@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 
-export default function Gallery({ images, folder, onOpenFolder, onSelect }) {
+export default function Gallery({ images, folder, onOpenFolder, onOpenFile, onSelect }) {
   const [hovered, setHovered] = useState(null)
 
   if (!folder) {
@@ -21,20 +21,33 @@ export default function Gallery({ images, folder, onOpenFolder, onSelect }) {
           </svg>
         </div>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 16, fontWeight: 700, color: '#fff', marginBottom: 6 }}>Open a folder to get started</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: '#fff', marginBottom: 6 }}>Open a folder or image to get started</div>
           <div style={{ fontSize: 13, color: 'var(--muted)' }}>Browse your photos in a beautiful, fast gallery</div>
         </div>
-        <button onClick={onOpenFolder} style={{
-          marginTop: 8, padding: '10px 22px', borderRadius: 10,
-          background: 'var(--accent)', color: '#fff',
-          border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600,
-          transition: 'opacity 0.15s',
-        }}
-          onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
-          onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-        >
-          Open folder
-        </button>
+        <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+          <button onClick={onOpenFolder} style={{
+            padding: '10px 22px', borderRadius: 10,
+            background: 'var(--accent)', color: '#fff',
+            border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600,
+            transition: 'opacity 0.15s',
+          }}
+            onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+            onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+          >
+            Open folder
+          </button>
+          <button onClick={onOpenFile} style={{
+            padding: '10px 22px', borderRadius: 10,
+            background: 'rgba(255,255,255,0.08)', color: '#fff',
+            border: '1px solid rgba(255,255,255,0.14)', cursor: 'pointer', fontSize: 14, fontWeight: 600,
+            transition: 'background 0.15s',
+          }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.13)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+          >
+            Open image
+          </button>
+        </div>
       </div>
     )
   }
