@@ -27,7 +27,7 @@ function createWindow() {
     backgroundColor: '#0f0f13',
     titleBarStyle: 'hidden',
     webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
+      preload: join(__dirname, '../preload/preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
     },
