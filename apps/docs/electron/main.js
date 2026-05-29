@@ -144,6 +144,11 @@ ipcMain.handle('docs:stat', (_, filePath) => {
   } catch { return { exists: false } }
 })
 
+ipcMain.handle('docs:writeFile', (_, filePath, content) => {
+  try { fs.writeFileSync(filePath, content, 'utf8'); return { ok: true } }
+  catch (e) { return { ok: false, error: e.message } }
+})
+
 ipcMain.on('window:minimize', () => mainWin?.minimize())
 ipcMain.on('window:maximize', () => mainWin?.isMaximized() ? mainWin.unmaximize() : mainWin.maximize())
 ipcMain.on('window:close', () => mainWin?.close())

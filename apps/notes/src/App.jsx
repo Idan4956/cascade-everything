@@ -110,6 +110,7 @@ export default function App() {
             content={content}
             onChange={handleContentChange}
             active={!!selectedId}
+            noteTitle={selectedNote?.title}
           />
         </div>
       </div>

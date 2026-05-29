@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('docsAPI', {
   showInFolder: (filePath) => ipcRenderer.invoke('docs:showInFolder', filePath),
   openExternal: (filePath) => ipcRenderer.invoke('docs:openExternal', filePath),
   stat: (filePath) => ipcRenderer.invoke('docs:stat', filePath),
+  writeFile: (filePath, content) => ipcRenderer.invoke('docs:writeFile', filePath, content),
   onOpenPath: (cb) => {
     ipcRenderer.on('docs:openPath', (_, p) => cb(p))
     return () => ipcRenderer.removeAllListeners('docs:openPath')

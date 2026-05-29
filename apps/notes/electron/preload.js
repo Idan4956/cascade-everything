@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('notesAPI', {
   rename: (oldPath, newTitle) => ipcRenderer.invoke('notes:rename', oldPath, newTitle),
   delete: (notePath) => ipcRenderer.invoke('notes:delete', notePath),
   search: (query) => ipcRenderer.invoke('notes:search', query),
+  export: (opts) => ipcRenderer.invoke('notes:export', opts),
   minimize: () => ipcRenderer.send('window:minimize'),
   maximize: () => ipcRenderer.send('window:maximize'),
   close: () => ipcRenderer.send('window:close'),
