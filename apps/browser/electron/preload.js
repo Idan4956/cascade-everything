@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('browserAPI', {
 
   getBookmarks: () => ipcRenderer.invoke('browser:getBookmarks'),
   addBookmark: (bm) => ipcRenderer.invoke('browser:addBookmark', bm),
+  updateBookmark: (bm) => ipcRenderer.invoke('browser:updateBookmark', bm),
   removeBookmark: (url) => ipcRenderer.invoke('browser:removeBookmark', url),
 
   getHistory: () => ipcRenderer.invoke('browser:getHistory'),

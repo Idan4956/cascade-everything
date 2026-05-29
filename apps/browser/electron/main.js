@@ -27,7 +27,7 @@ function createWindow() {
     minHeight: 500,
     frame: false,
     backgroundColor: '#0f0f13',
-    ...(process.platform === 'darwin' && { titleBarStyle: 'hidden', trafficLightPosition: { x: 16, y: 14 } }),
+    ...(process.platform === 'darwin' && { titleBarStyle: 'hidden' }),
     webPreferences: {
       preload: join(__dirname, '../preload/preload.js'),
       contextIsolation: true,
@@ -90,7 +90,18 @@ ipcMain.handle('browser:getBookmarks', () => loadData().bookmarks)
 
 ipcMain.handle('browser:addBookmark', (_, bm) => {
   const d = loadData()
-  if (!d.bookmarks.find(b => b.url === bm.url)) d.bookmarks.unshift({ ...bm, added: Date.now() })
+  if (!d.bookmarks.find(b => b.url === bm.url)) {
+    d.bookmarks.unshift({ ...bm, tags: bm.tags || [], added: Date.now() })
+  }
+  saveData(d)
+  return d.bookmarks
+})
+
+ipcMain.handle('browser:updateBookmark', (_, bm) => {
+  const d = loadData()
+  const idx = d.bookmarks.findIndex(b => b.url === bm.url)
+  if (idx >= 0) d.bookmarks[idx] = { ...d.bookmarks[idx], ...bm }
+  else d.bookmarks.unshift({ ...bm, tags: bm.tags || [], added: Date.now() })
   saveData(d)
   return d.bookmarks
 })
@@ -102,7 +113,7 @@ ipcMain.handle('browser:removeBookmark', (_, url) => {
   return d.bookmarks
 })
 
-ipcMain.handle('browser:getHistory', () => loadData().history.slice(0, 200))
+ipcMain.handle('browser:getHistory', () => loadData().history.slice(0, 500))
 
 ipcMain.handle('browser:addHistory', (_, entry) => {
   const d = loadData()
