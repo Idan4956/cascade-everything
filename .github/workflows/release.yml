@@ -15,11 +15,11 @@ permissions:
 
 jobs:
 
-  # ── Explorer ────────────────────────────────────────────────────────────────
+  # ── Windows (all apps) ───────────────────────────────────────────────────────
 
-  explorer-windows:
+  windows:
     runs-on: windows-latest
-    name: Explorer · Windows
+    name: Windows · All Apps
     steps:
       - uses: actions/checkout@v4
         with:
@@ -37,194 +37,82 @@ jobs:
           curl.exe -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-$v.tgz" -o "$env:TEMP\ab.tgz"
           tar -xzOf "$env:TEMP\ab.tgz" "package/win/x64/app-builder.exe" > $tmp
           if (!(Test-Path $tmp) -or (Get-Item $tmp).Length -eq 0) { Write-Host "ERROR: binary missing or empty"; exit 1 }
-          Write-Host "Done: $(Get-Item $tmp)"
-          # Place at path electron-builder resolves via require("app-builder-bin")
           $dest = "node_modules\app-builder-bin\win\x64"
           New-Item -ItemType Directory -Force $dest | Out-Null
           Copy-Item $tmp "$dest\app-builder.exe" -Force
-          # Strip postinstall so npm can't re-run it and overwrite our binary
           $pkg = Get-Content "node_modules\app-builder-bin\package.json" -Raw | ConvertFrom-Json
           $pkg.PSObject.Properties.Remove("scripts")
           $pkg | ConvertTo-Json -Depth 10 | Set-Content "node_modules\app-builder-bin\package.json"
           echo "APP_BUILDER_BIN=$tmp" >> $env:GITHUB_ENV
+
       - run: npm run build
         working-directory: apps/explorer
-      - name: Build NSIS installer
-        run: npx electron-builder --win nsis --publish=never
+      - run: npx electron-builder --win nsis --publish=never
         working-directory: apps/explorer
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
-      - name: Rename artifacts
+      - name: Rename Explorer
         shell: pwsh
         working-directory: apps/explorer
         run: |
           $exe = Get-ChildItem -Path release -Filter "*.exe" | Where-Object { $_.Name -notmatch 'unins' } | Select-Object -First 1
           if ($exe) { Rename-Item $exe.FullName "Cascade-Explorer-Setup.exe" } else { exit 1 }
-      - uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ github.event.release.tag_name || inputs.tag }}
-          files: |
-            apps/explorer/release/Cascade-Explorer-Setup.exe
-            apps/explorer/release/latest.yml
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  explorer-macos:
-    runs-on: macos-latest
-    name: Explorer · macOS
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.release.tag_name || inputs.tag || github.sha }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - run: npm install
-      - name: Install app-builder binary
-        run: |
-          set -e
-          VER=$(node -p "require('./node_modules/app-builder-bin/package.json').version")
-          ARCH=$(node -p "process.arch === 'x64' ? 'amd64' : process.arch")
-          curl -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-${VER}.tgz" -o /tmp/ab.tgz
-          # Extract to /tmp (untouchable by npm)
-          tar -xzOf /tmp/ab.tgz "package/mac/app-builder_${ARCH}" > /tmp/app-builder
-          chmod +x /tmp/app-builder
-          ls -lh /tmp/app-builder
-          /tmp/app-builder --version
-          # Place at path electron-builder resolves via require("app-builder-bin")
-          DEST="node_modules/app-builder-bin/mac"
-          mkdir -p "$DEST"
-          cp /tmp/app-builder "$DEST/app-builder_${ARCH}"
-          # Strip postinstall so npm can't re-run it and overwrite our binary
-          node -e "
-            const fs = require('fs');
-            const pkg = JSON.parse(fs.readFileSync('./node_modules/app-builder-bin/package.json', 'utf8'));
-            delete pkg.scripts;
-            fs.writeFileSync('./node_modules/app-builder-bin/package.json', JSON.stringify(pkg, null, 2));
-          "
-          echo "APP_BUILDER_BIN=/tmp/app-builder" >> $GITHUB_ENV
-      - run: npm run build
-        working-directory: apps/explorer
-      - run: npx electron-builder --mac dmg --publish=never
-        working-directory: apps/explorer
-        env:
-          CSC_IDENTITY_AUTO_DISCOVERY: false
-      - name: Rename
-        working-directory: apps/explorer
-        run: |
-          DMG=$(find release -name "*.dmg" | head -1)
-          [ -n "$DMG" ] && mv "$DMG" release/Cascade-Explorer-mac.dmg || exit 1
-      - uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ github.event.release.tag_name || inputs.tag }}
-          files: |
-            apps/explorer/release/Cascade-Explorer-mac.dmg
-            apps/explorer/release/latest-mac.yml
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  explorer-linux:
-    runs-on: ubuntu-latest
-    name: Explorer · Linux
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.release.tag_name || inputs.tag || github.sha }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - run: npm install
-      - name: Install app-builder binary
-        run: |
-          set -e
-          VER=$(node -p "require('./node_modules/app-builder-bin/package.json').version")
-          curl -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-${VER}.tgz" -o /tmp/ab.tgz
-          tar -xzOf /tmp/ab.tgz "package/linux/x64/app-builder" > /tmp/app-builder
-          chmod +x /tmp/app-builder
-          ls -lh /tmp/app-builder
-          DEST="node_modules/app-builder-bin/linux/x64"
-          mkdir -p "$DEST"
-          cp /tmp/app-builder "$DEST/app-builder"
-          node -e "
-            const fs = require('fs');
-            const pkg = JSON.parse(fs.readFileSync('./node_modules/app-builder-bin/package.json', 'utf8'));
-            delete pkg.scripts;
-            fs.writeFileSync('./node_modules/app-builder-bin/package.json', JSON.stringify(pkg, null, 2));
-          "
-          echo "APP_BUILDER_BIN=/tmp/app-builder" >> $GITHUB_ENV
-      - run: sudo apt-get install -y rpm fakeroot
-      - run: npm run build
-        working-directory: apps/explorer
-      - run: npx electron-builder --linux AppImage --publish=never
-        working-directory: apps/explorer
-        env:
-          CSC_IDENTITY_AUTO_DISCOVERY: false
-      - name: Rename
-        working-directory: apps/explorer
-        run: |
-          IMG=$(find release -name "*.AppImage" | head -1)
-          [ -n "$IMG" ] && mv "$IMG" release/Cascade-Explorer-linux.AppImage || exit 1
-      - uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ github.event.release.tag_name || inputs.tag }}
-          files: |
-            apps/explorer/release/Cascade-Explorer-linux.AppImage
-            apps/explorer/release/latest-linux.yml
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  # ── Photos ──────────────────────────────────────────────────────────────────
-
-  photos-windows:
-    runs-on: windows-latest
-    name: Photos · Windows
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.release.tag_name || inputs.tag || github.sha }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - run: npm install
-      - name: Install app-builder binary
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-          $v   = (node -p "require('./node_modules/app-builder-bin/package.json').version").Trim()
-          $tmp = "$env:TEMP\app-builder.exe"
-          curl.exe -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-$v.tgz" -o "$env:TEMP\ab.tgz"
-          tar -xzOf "$env:TEMP\ab.tgz" "package/win/x64/app-builder.exe" > $tmp
-          if (!(Test-Path $tmp) -or (Get-Item $tmp).Length -eq 0) { Write-Host "ERROR: binary missing or empty"; exit 1 }
-          Write-Host "Done: $(Get-Item $tmp)"
-          $dest = "node_modules\app-builder-bin\win\x64"
-          New-Item -ItemType Directory -Force $dest | Out-Null
-          Copy-Item $tmp "$dest\app-builder.exe" -Force
-          $pkg = Get-Content "node_modules\app-builder-bin\package.json" -Raw | ConvertFrom-Json
-          $pkg.PSObject.Properties.Remove("scripts")
-          $pkg | ConvertTo-Json -Depth 10 | Set-Content "node_modules\app-builder-bin\package.json"
-          echo "APP_BUILDER_BIN=$tmp" >> $env:GITHUB_ENV
       - run: npm run build
         working-directory: apps/photos
       - run: npx electron-builder --win nsis --publish=never
         working-directory: apps/photos
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
-      - name: Rename
+      - name: Rename Photos
         shell: pwsh
         working-directory: apps/photos
         run: |
           $exe = Get-ChildItem -Path release -Filter "*.exe" | Where-Object { $_.Name -notmatch 'unins' } | Select-Object -First 1
           if ($exe) { Rename-Item $exe.FullName "Cascade-Photos-Setup.exe" } else { exit 1 }
+
+      - run: npm run build
+        working-directory: apps/docs
+      - run: npx electron-builder --win nsis --publish=never
+        working-directory: apps/docs
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+      - name: Rename Docs
+        shell: pwsh
+        working-directory: apps/docs
+        run: |
+          $exe = Get-ChildItem -Path release -Filter "*.exe" | Where-Object { $_.Name -notmatch 'unins' } | Select-Object -First 1
+          if ($exe) { Rename-Item $exe.FullName "Cascade-Docs-Setup.exe" } else { exit 1 }
+
+      - run: npm run build
+        working-directory: apps/notes
+      - run: npx electron-builder --win nsis --publish=never
+        working-directory: apps/notes
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+      - name: Rename Notes
+        shell: pwsh
+        working-directory: apps/notes
+        run: |
+          $exe = Get-ChildItem -Path release -Filter "*.exe" | Where-Object { $_.Name -notmatch 'unins' } | Select-Object -First 1
+          if ($exe) { Rename-Item $exe.FullName "Cascade-Notes-Setup.exe" } else { exit 1 }
+
       - uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.event.release.tag_name || inputs.tag }}
-          files: apps/photos/release/Cascade-Photos-Setup.exe
+          files: |
+            apps/explorer/release/Cascade-Explorer-Setup.exe
+            apps/photos/release/Cascade-Photos-Setup.exe
+            apps/docs/release/Cascade-Docs-Setup.exe
+            apps/notes/release/Cascade-Notes-Setup.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  photos-macos:
+  # ── macOS (all apps) ─────────────────────────────────────────────────────────
+
+  macos:
     runs-on: macos-latest
-    name: Photos · macOS
+    name: macOS · All Apps
     steps:
       - uses: actions/checkout@v4
         with:
@@ -241,7 +129,6 @@ jobs:
           curl -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-${VER}.tgz" -o /tmp/ab.tgz
           tar -xzOf /tmp/ab.tgz "package/mac/app-builder_${ARCH}" > /tmp/app-builder
           chmod +x /tmp/app-builder
-          ls -lh /tmp/app-builder
           /tmp/app-builder --version
           DEST="node_modules/app-builder-bin/mac"
           mkdir -p "$DEST"
@@ -253,170 +140,63 @@ jobs:
             fs.writeFileSync('./node_modules/app-builder-bin/package.json', JSON.stringify(pkg, null, 2));
           "
           echo "APP_BUILDER_BIN=/tmp/app-builder" >> $GITHUB_ENV
+
+      - run: npm run build
+        working-directory: apps/explorer
+      - run: npx electron-builder --mac dmg --publish=never
+        working-directory: apps/explorer
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+      - name: Rename Explorer
+        working-directory: apps/explorer
+        run: mv "$(find release -name '*.dmg' | head -1)" release/Cascade-Explorer-mac.dmg
+
       - run: npm run build
         working-directory: apps/photos
       - run: npx electron-builder --mac dmg --publish=never
         working-directory: apps/photos
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
-      - name: Rename
+      - name: Rename Photos
         working-directory: apps/photos
-        run: |
-          DMG=$(find release -name "*.dmg" | head -1)
-          [ -n "$DMG" ] && mv "$DMG" release/Cascade-Photos-mac.dmg || exit 1
-      - uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ github.event.release.tag_name || inputs.tag }}
-          files: apps/photos/release/Cascade-Photos-mac.dmg
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: mv "$(find release -name '*.dmg' | head -1)" release/Cascade-Photos-mac.dmg
 
-  photos-linux:
-    runs-on: ubuntu-latest
-    name: Photos · Linux
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.release.tag_name || inputs.tag || github.sha }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - run: npm install
-      - name: Install app-builder binary
-        run: |
-          set -e
-          VER=$(node -p "require('./node_modules/app-builder-bin/package.json').version")
-          curl -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-${VER}.tgz" -o /tmp/ab.tgz
-          tar -xzOf /tmp/ab.tgz "package/linux/x64/app-builder" > /tmp/app-builder
-          chmod +x /tmp/app-builder
-          ls -lh /tmp/app-builder
-          DEST="node_modules/app-builder-bin/linux/x64"
-          mkdir -p "$DEST"
-          cp /tmp/app-builder "$DEST/app-builder"
-          node -e "
-            const fs = require('fs');
-            const pkg = JSON.parse(fs.readFileSync('./node_modules/app-builder-bin/package.json', 'utf8'));
-            delete pkg.scripts;
-            fs.writeFileSync('./node_modules/app-builder-bin/package.json', JSON.stringify(pkg, null, 2));
-          "
-          echo "APP_BUILDER_BIN=/tmp/app-builder" >> $GITHUB_ENV
-      - run: sudo apt-get install -y rpm fakeroot
-      - run: npm run build
-        working-directory: apps/photos
-      - run: npx electron-builder --linux AppImage --publish=never
-        working-directory: apps/photos
-        env:
-          CSC_IDENTITY_AUTO_DISCOVERY: false
-      - name: Rename
-        working-directory: apps/photos
-        run: |
-          IMG=$(find release -name "*.AppImage" | head -1)
-          [ -n "$IMG" ] && mv "$IMG" release/Cascade-Photos-linux.AppImage || exit 1
-      - uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ github.event.release.tag_name || inputs.tag }}
-          files: apps/photos/release/Cascade-Photos-linux.AppImage
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  # ── Docs ────────────────────────────────────────────────────────────────────
-
-  docs-windows:
-    runs-on: windows-latest
-    name: Docs · Windows
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.release.tag_name || inputs.tag || github.sha }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - run: npm install
-      - name: Install app-builder binary
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-          $v   = (node -p "require('./node_modules/app-builder-bin/package.json').version").Trim()
-          $tmp = "$env:TEMP\app-builder.exe"
-          curl.exe -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-$v.tgz" -o "$env:TEMP\ab.tgz"
-          tar -xzOf "$env:TEMP\ab.tgz" "package/win/x64/app-builder.exe" > $tmp
-          if (!(Test-Path $tmp) -or (Get-Item $tmp).Length -eq 0) { Write-Host "ERROR: binary missing or empty"; exit 1 }
-          $dest = "node_modules\app-builder-bin\win\x64"
-          New-Item -ItemType Directory -Force $dest | Out-Null
-          Copy-Item $tmp "$dest\app-builder.exe" -Force
-          $pkg = Get-Content "node_modules\app-builder-bin\package.json" -Raw | ConvertFrom-Json
-          $pkg.PSObject.Properties.Remove("scripts")
-          $pkg | ConvertTo-Json -Depth 10 | Set-Content "node_modules\app-builder-bin\package.json"
-          echo "APP_BUILDER_BIN=$tmp" >> $env:GITHUB_ENV
-      - run: npm run build
-        working-directory: apps/docs
-      - run: npx electron-builder --win nsis --publish=never
-        working-directory: apps/docs
-        env:
-          CSC_IDENTITY_AUTO_DISCOVERY: false
-      - name: Rename artifacts
-        shell: pwsh
-        working-directory: apps/docs
-        run: |
-          $exe = Get-ChildItem -Path release -Filter "*.exe" | Where-Object { $_.Name -notmatch 'unins' } | Select-Object -First 1
-          if ($exe) { Rename-Item $exe.FullName "Cascade-Docs-Setup.exe" } else { exit 1 }
-      - uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ github.event.release.tag_name || inputs.tag }}
-          files: apps/docs/release/Cascade-Docs-Setup.exe
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  docs-macos:
-    runs-on: macos-latest
-    name: Docs · macOS
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.release.tag_name || inputs.tag || github.sha }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - run: npm install
-      - name: Install app-builder binary
-        run: |
-          set -e
-          VER=$(node -p "require('./node_modules/app-builder-bin/package.json').version")
-          ARCH=$(node -p "process.arch === 'x64' ? 'amd64' : process.arch")
-          curl -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-${VER}.tgz" -o /tmp/ab.tgz
-          tar -xzOf /tmp/ab.tgz "package/mac/app-builder_${ARCH}" > /tmp/app-builder
-          chmod +x /tmp/app-builder
-          DEST="node_modules/app-builder-bin/mac"
-          mkdir -p "$DEST"
-          cp /tmp/app-builder "$DEST/app-builder_${ARCH}"
-          node -e "
-            const fs = require('fs');
-            const pkg = JSON.parse(fs.readFileSync('./node_modules/app-builder-bin/package.json', 'utf8'));
-            delete pkg.scripts;
-            fs.writeFileSync('./node_modules/app-builder-bin/package.json', JSON.stringify(pkg, null, 2));
-          "
-          echo "APP_BUILDER_BIN=/tmp/app-builder" >> $GITHUB_ENV
       - run: npm run build
         working-directory: apps/docs
       - run: npx electron-builder --mac dmg --publish=never
         working-directory: apps/docs
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
-      - name: Rename
+      - name: Rename Docs
         working-directory: apps/docs
-        run: |
-          DMG=$(find release -name "*.dmg" | head -1)
-          [ -n "$DMG" ] && mv "$DMG" release/Cascade-Docs-mac.dmg || exit 1
+        run: mv "$(find release -name '*.dmg' | head -1)" release/Cascade-Docs-mac.dmg
+
+      - run: npm run build
+        working-directory: apps/notes
+      - run: npx electron-builder --mac dmg --publish=never
+        working-directory: apps/notes
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+      - name: Rename Notes
+        working-directory: apps/notes
+        run: mv "$(find release -name '*.dmg' | head -1)" release/Cascade-Notes-mac.dmg
+
       - uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.event.release.tag_name || inputs.tag }}
-          files: apps/docs/release/Cascade-Docs-mac.dmg
+          files: |
+            apps/explorer/release/Cascade-Explorer-mac.dmg
+            apps/photos/release/Cascade-Photos-mac.dmg
+            apps/docs/release/Cascade-Docs-mac.dmg
+            apps/notes/release/Cascade-Notes-mac.dmg
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  docs-linux:
+  # ── Linux (all apps) ─────────────────────────────────────────────────────────
+
+  linux:
     runs-on: ubuntu-latest
-    name: Docs · Linux
+    name: Linux · All Apps
     steps:
       - uses: actions/checkout@v4
         with:
@@ -443,162 +223,54 @@ jobs:
           "
           echo "APP_BUILDER_BIN=/tmp/app-builder" >> $GITHUB_ENV
       - run: sudo apt-get install -y rpm fakeroot
+
+      - run: npm run build
+        working-directory: apps/explorer
+      - run: npx electron-builder --linux AppImage --publish=never
+        working-directory: apps/explorer
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+      - name: Rename Explorer
+        working-directory: apps/explorer
+        run: mv "$(find release -name '*.AppImage' | head -1)" release/Cascade-Explorer-linux.AppImage
+
+      - run: npm run build
+        working-directory: apps/photos
+      - run: npx electron-builder --linux AppImage --publish=never
+        working-directory: apps/photos
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+      - name: Rename Photos
+        working-directory: apps/photos
+        run: mv "$(find release -name '*.AppImage' | head -1)" release/Cascade-Photos-linux.AppImage
+
       - run: npm run build
         working-directory: apps/docs
       - run: npx electron-builder --linux AppImage --publish=never
         working-directory: apps/docs
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
-      - name: Rename
+      - name: Rename Docs
         working-directory: apps/docs
-        run: |
-          IMG=$(find release -name "*.AppImage" | head -1)
-          [ -n "$IMG" ] && mv "$IMG" release/Cascade-Docs-linux.AppImage || exit 1
-      - uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ github.event.release.tag_name || inputs.tag }}
-          files: apps/docs/release/Cascade-Docs-linux.AppImage
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: mv "$(find release -name '*.AppImage' | head -1)" release/Cascade-Docs-linux.AppImage
 
-  # ── Notes ───────────────────────────────────────────────────────────────────
-
-  notes-windows:
-    runs-on: windows-latest
-    name: Notes · Windows
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.release.tag_name || inputs.tag || github.sha }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - run: npm install
-      - name: Install app-builder binary
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-          $v   = (node -p "require('./node_modules/app-builder-bin/package.json').version").Trim()
-          $tmp = "$env:TEMP\app-builder.exe"
-          curl.exe -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-$v.tgz" -o "$env:TEMP\ab.tgz"
-          tar -xzOf "$env:TEMP\ab.tgz" "package/win/x64/app-builder.exe" > $tmp
-          if (!(Test-Path $tmp) -or (Get-Item $tmp).Length -eq 0) { Write-Host "ERROR: binary missing or empty"; exit 1 }
-          $dest = "node_modules\app-builder-bin\win\x64"
-          New-Item -ItemType Directory -Force $dest | Out-Null
-          Copy-Item $tmp "$dest\app-builder.exe" -Force
-          $pkg = Get-Content "node_modules\app-builder-bin\package.json" -Raw | ConvertFrom-Json
-          $pkg.PSObject.Properties.Remove("scripts")
-          $pkg | ConvertTo-Json -Depth 10 | Set-Content "node_modules\app-builder-bin\package.json"
-          echo "APP_BUILDER_BIN=$tmp" >> $env:GITHUB_ENV
-      - run: npm run build
-        working-directory: apps/notes
-      - run: npx electron-builder --win nsis --publish=never
-        working-directory: apps/notes
-        env:
-          CSC_IDENTITY_AUTO_DISCOVERY: false
-      - name: Rename artifacts
-        shell: pwsh
-        working-directory: apps/notes
-        run: |
-          $exe = Get-ChildItem -Path release -Filter "*.exe" | Where-Object { $_.Name -notmatch 'unins' } | Select-Object -First 1
-          if ($exe) { Rename-Item $exe.FullName "Cascade-Notes-Setup.exe" } else { exit 1 }
-      - uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ github.event.release.tag_name || inputs.tag }}
-          files: apps/notes/release/Cascade-Notes-Setup.exe
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  notes-macos:
-    runs-on: macos-latest
-    name: Notes · macOS
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.release.tag_name || inputs.tag || github.sha }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - run: npm install
-      - name: Install app-builder binary
-        run: |
-          set -e
-          VER=$(node -p "require('./node_modules/app-builder-bin/package.json').version")
-          ARCH=$(node -p "process.arch === 'x64' ? 'amd64' : process.arch")
-          curl -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-${VER}.tgz" -o /tmp/ab.tgz
-          tar -xzOf /tmp/ab.tgz "package/mac/app-builder_${ARCH}" > /tmp/app-builder
-          chmod +x /tmp/app-builder
-          DEST="node_modules/app-builder-bin/mac"
-          mkdir -p "$DEST"
-          cp /tmp/app-builder "$DEST/app-builder_${ARCH}"
-          node -e "
-            const fs = require('fs');
-            const pkg = JSON.parse(fs.readFileSync('./node_modules/app-builder-bin/package.json', 'utf8'));
-            delete pkg.scripts;
-            fs.writeFileSync('./node_modules/app-builder-bin/package.json', JSON.stringify(pkg, null, 2));
-          "
-          echo "APP_BUILDER_BIN=/tmp/app-builder" >> $GITHUB_ENV
-      - run: npm run build
-        working-directory: apps/notes
-      - run: npx electron-builder --mac dmg --publish=never
-        working-directory: apps/notes
-        env:
-          CSC_IDENTITY_AUTO_DISCOVERY: false
-      - name: Rename
-        working-directory: apps/notes
-        run: |
-          DMG=$(find release -name "*.dmg" | head -1)
-          [ -n "$DMG" ] && mv "$DMG" release/Cascade-Notes-mac.dmg || exit 1
-      - uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ github.event.release.tag_name || inputs.tag }}
-          files: apps/notes/release/Cascade-Notes-mac.dmg
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  notes-linux:
-    runs-on: ubuntu-latest
-    name: Notes · Linux
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.release.tag_name || inputs.tag || github.sha }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - run: npm install
-      - name: Install app-builder binary
-        run: |
-          set -e
-          VER=$(node -p "require('./node_modules/app-builder-bin/package.json').version")
-          curl -fsSL "https://registry.npmjs.org/app-builder-bin/-/app-builder-bin-${VER}.tgz" -o /tmp/ab.tgz
-          tar -xzOf /tmp/ab.tgz "package/linux/x64/app-builder" > /tmp/app-builder
-          chmod +x /tmp/app-builder
-          DEST="node_modules/app-builder-bin/linux/x64"
-          mkdir -p "$DEST"
-          cp /tmp/app-builder "$DEST/app-builder"
-          node -e "
-            const fs = require('fs');
-            const pkg = JSON.parse(fs.readFileSync('./node_modules/app-builder-bin/package.json', 'utf8'));
-            delete pkg.scripts;
-            fs.writeFileSync('./node_modules/app-builder-bin/package.json', JSON.stringify(pkg, null, 2));
-          "
-          echo "APP_BUILDER_BIN=/tmp/app-builder" >> $GITHUB_ENV
-      - run: sudo apt-get install -y rpm fakeroot
       - run: npm run build
         working-directory: apps/notes
       - run: npx electron-builder --linux AppImage --publish=never
         working-directory: apps/notes
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
-      - name: Rename
+      - name: Rename Notes
         working-directory: apps/notes
-        run: |
-          IMG=$(find release -name "*.AppImage" | head -1)
-          [ -n "$IMG" ] && mv "$IMG" release/Cascade-Notes-linux.AppImage || exit 1
+        run: mv "$(find release -name '*.AppImage' | head -1)" release/Cascade-Notes-linux.AppImage
+
       - uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.event.release.tag_name || inputs.tag }}
-          files: apps/notes/release/Cascade-Notes-linux.AppImage
+          files: |
+            apps/explorer/release/Cascade-Explorer-linux.AppImage
+            apps/photos/release/Cascade-Photos-linux.AppImage
+            apps/docs/release/Cascade-Docs-linux.AppImage
+            apps/notes/release/Cascade-Notes-linux.AppImage
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
