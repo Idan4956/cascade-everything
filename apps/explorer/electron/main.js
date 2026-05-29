@@ -173,8 +173,7 @@ function createWindow() {
     minHeight: 600,
     resizable: true,
     frame: false,
-    titleBarStyle: 'hidden',
-    trafficLightPosition: { x: 16, y: 14 },
+    ...(process.platform === 'darwin' && { titleBarStyle: 'hidden', trafficLightPosition: { x: 16, y: 14 } }),
     backgroundColor: '#0d0b18',
     webPreferences: {
       preload: join(__dirname, '../preload/preload.js'),
