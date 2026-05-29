@@ -1,0 +1,55 @@
+{
+  "name": "cascade-browser",
+  "version": "1.0.0",
+  "description": "A Chromium-based browser — part of the Cascade Suite",
+  "author": "Idan4956",
+  "main": "out/main/main.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "package": "electron-vite build && electron-builder --publish=never"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "electron-vite": "^2.3.0",
+    "vite": "^5.4.0"
+  },
+  "build": {
+    "npmRebuild": false,
+    "appId": "com.cascade.browser",
+    "productName": "Cascade Browser",
+    "icon": "resources/icon.png",
+    "publish": {
+      "provider": "github",
+      "owner": "Idan4956",
+      "repo": "cascade-explorer"
+    },
+    "directories": { "output": "release" },
+    "files": ["out/**"],
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "icon": "resources/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.productivity",
+      "icon": "resources/icon.png"
+    },
+    "linux": {
+      "target": "AppImage",
+      "category": "Network",
+      "icon": "resources/icon.png"
+    }
+  }
+}

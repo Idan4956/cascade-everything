@@ -8,8 +8,10 @@
   "scripts": {
     "dev:explorer": "npm -w apps/explorer run dev",
     "dev:photos": "npm -w apps/photos run dev",
+    "dev:browser": "npm -w apps/browser run dev",
     "build:explorer": "npm -w apps/explorer run build",
-    "build:photos": "npm -w apps/photos run build"
+    "build:photos": "npm -w apps/photos run build",
+    "build:browser": "npm -w apps/browser run build"
   },
   "devDependencies": {
     "electron": "33.2.1",

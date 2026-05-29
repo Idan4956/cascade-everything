@@ -97,6 +97,19 @@ jobs:
           $exe = Get-ChildItem -Path release -Filter "*.exe" | Where-Object { $_.Name -notmatch 'unins' } | Select-Object -First 1
           if ($exe) { Rename-Item $exe.FullName "Cascade-Notes-Setup.exe" } else { exit 1 }
 
+      - run: npm run build
+        working-directory: apps/browser
+      - run: npx electron-builder --win nsis --publish=never
+        working-directory: apps/browser
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+      - name: Rename Browser
+        shell: pwsh
+        working-directory: apps/browser
+        run: |
+          $exe = Get-ChildItem -Path release -Filter "*.exe" | Where-Object { $_.Name -notmatch 'unins' } | Select-Object -First 1
+          if ($exe) { Rename-Item $exe.FullName "Cascade-Browser-Setup.exe" } else { exit 1 }
+
       - uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.event.release.tag_name || inputs.tag }}
@@ -105,6 +118,7 @@ jobs:
             apps/photos/release/Cascade-Photos-Setup.exe
             apps/docs/release/Cascade-Docs-Setup.exe
             apps/notes/release/Cascade-Notes-Setup.exe
+            apps/browser/release/Cascade-Browser-Setup.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -181,6 +195,16 @@ jobs:
         working-directory: apps/notes
         run: mv "$(find release -name '*.dmg' | head -1)" release/Cascade-Notes-mac.dmg
 
+      - run: npm run build
+        working-directory: apps/browser
+      - run: npx electron-builder --mac dmg --publish=never
+        working-directory: apps/browser
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+      - name: Rename Browser
+        working-directory: apps/browser
+        run: mv "$(find release -name '*.dmg' | head -1)" release/Cascade-Browser-mac.dmg
+
       - uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.event.release.tag_name || inputs.tag }}
@@ -189,6 +213,7 @@ jobs:
             apps/photos/release/Cascade-Photos-mac.dmg
             apps/docs/release/Cascade-Docs-mac.dmg
             apps/notes/release/Cascade-Notes-mac.dmg
+            apps/browser/release/Cascade-Browser-mac.dmg
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -264,6 +289,16 @@ jobs:
         working-directory: apps/notes
         run: mv "$(find release -name '*.AppImage' | head -1)" release/Cascade-Notes-linux.AppImage
 
+      - run: npm run build
+        working-directory: apps/browser
+      - run: npx electron-builder --linux AppImage --publish=never
+        working-directory: apps/browser
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+      - name: Rename Browser
+        working-directory: apps/browser
+        run: mv "$(find release -name '*.AppImage' | head -1)" release/Cascade-Browser-linux.AppImage
+
       - uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.event.release.tag_name || inputs.tag }}
@@ -272,5 +307,6 @@ jobs:
             apps/photos/release/Cascade-Photos-linux.AppImage
             apps/docs/release/Cascade-Docs-linux.AppImage
             apps/notes/release/Cascade-Notes-linux.AppImage
+            apps/browser/release/Cascade-Browser-linux.AppImage
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
