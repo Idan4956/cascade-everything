@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
 contextBridge.exposeInMainWorld('photosAPI', {
+  platform: process.platform,
   openDialog: (startPath) => ipcRenderer.invoke('photos:openDialog', startPath),
   openFileDialog: (startPath) => ipcRenderer.invoke('photos:openFileDialog', startPath),
   listDir: (dirPath) => ipcRenderer.invoke('photos:listDir', dirPath),

@@ -1,5 +1,7 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { basename } from '../utils.js'
+
+const isMac = window.photosAPI?.platform === 'darwin'
 
 export default function TitleBar({ folder, imageCount, onOpenFolder, onOpenFile, inViewer, onBackToGallery, currentImage }) {
   return (
@@ -9,7 +11,7 @@ export default function TitleBar({ folder, imageCount, onOpenFolder, onOpenFile,
       borderBottom: '1px solid var(--border)',
       display: 'flex',
       alignItems: 'center',
-      padding: '0 12px',
+      padding: isMac ? '0 12px' : '0 0 0 12px',
       gap: 8,
       flexShrink: 0,
       WebkitAppRegion: 'drag',
@@ -40,7 +42,7 @@ export default function TitleBar({ folder, imageCount, onOpenFolder, onOpenFile,
         </span>
       )}
 
-      {/* Actions */}
+      {/* App action buttons */}
       <div style={{ display: 'flex', gap: 4, marginLeft: 'auto', WebkitAppRegion: 'no-drag' }}>
         {inViewer && (
           <BarBtn onClick={onBackToGallery} title="Back to gallery">
@@ -62,11 +64,65 @@ export default function TitleBar({ folder, imageCount, onOpenFolder, onOpenFile,
           </BarBtn>
         )}
         <div style={{ width: 1, background: 'var(--border)', margin: '8px 2px' }} />
-        <WinBtn onClick={() => window.photosAPI.minimize()} color="#ffbd2e" title="Minimise" />
-        <WinBtn onClick={() => window.photosAPI.maximize()} color="#27c93f" title="Maximise" />
-        <WinBtn onClick={() => window.photosAPI.close()} color="#ff5f56" title="Close" />
+
+        {isMac ? <MacControls /> : <WinControls />}
       </div>
     </div>
+  )
+}
+
+function MacControls() {
+  return (
+    <>
+      <MacBtn onClick={() => window.photosAPI.minimize()} color="#ffbd2e" title="Minimise" />
+      <MacBtn onClick={() => window.photosAPI.maximize()} color="#27c93f" title="Maximise" />
+      <MacBtn onClick={() => window.photosAPI.close()} color="#ff5f56" title="Close" />
+    </>
+  )
+}
+
+function WinControls() {
+  return (
+    <div style={{ display: 'flex', alignSelf: 'stretch', marginLeft: 4 }}>
+      <WinCtrlBtn onClick={() => window.photosAPI.minimize()} title="Minimise" hoverColor="rgba(255,255,255,0.1)">
+        <svg width="10" height="1" viewBox="0 0 10 1" fill="currentColor"><rect width="10" height="1"/></svg>
+      </WinCtrlBtn>
+      <WinCtrlBtn onClick={() => window.photosAPI.maximize()} title="Maximise/Restore" hoverColor="rgba(255,255,255,0.1)">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1">
+          <rect x="0.5" y="0.5" width="9" height="9"/>
+        </svg>
+      </WinCtrlBtn>
+      <WinCtrlBtn onClick={() => window.photosAPI.close()} title="Close" hoverColor="#c42b1c" closeBtn>
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+          <path d="M1 1 L9 9 M9 1 L1 9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+        </svg>
+      </WinCtrlBtn>
+    </div>
+  )
+}
+
+function WinCtrlBtn({ onClick, title, children, hoverColor, closeBtn }) {
+  const [hov, setHov] = useState(false)
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        width: 46,
+        alignSelf: 'stretch',
+        background: hov ? hoverColor : 'transparent',
+        border: 'none',
+        color: hov && closeBtn ? '#fff' : 'rgba(255,255,255,0.7)',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        transition: 'background 0.1s, color 0.1s',
+        flexShrink: 0,
+      }}
+    >{children}</button>
   )
 }
 
@@ -84,7 +140,7 @@ function BarBtn({ onClick, title, children }) {
   )
 }
 
-function WinBtn({ onClick, color, title }) {
+function MacBtn({ onClick, color, title }) {
   return (
     <button onClick={onClick} title={title} style={{
       width: 13, height: 13, borderRadius: '50%',
