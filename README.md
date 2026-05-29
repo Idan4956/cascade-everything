@@ -4,14 +4,14 @@
 
 # Cascade
 
-**A fast, beautiful file explorer — built for power users.**
+**A fast, beautiful file everything — built for power users.**
 
-[![Release](https://img.shields.io/github/v/release/Idan4956/cascade-explorer?style=flat-square&color=8b5cf6&label=latest)](https://github.com/Idan4956/cascade-explorer/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/Idan4956/cascade-explorer/total?style=flat-square&color=6366f1&label=downloads)](https://github.com/Idan4956/cascade-explorer/releases)
+[![Release](https://img.shields.io/github/v/release/Idan4956/cascade-everything?style=flat-square&color=8b5cf6&label=latest)](https://github.com/Idan4956/cascade-everything/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/Idan4956/cascade-everything/total?style=flat-square&color=6366f1&label=downloads)](https://github.com/Idan4956/cascade-everything/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-333?style=flat-square)](https://github.com/Idan4956/cascade-explorer/releases/latest)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-333?style=flat-square)](https://github.com/Idan4956/cascade-everything/releases/latest)
 
-[**Download**](#-download) · [Website](https://idan4956.github.io/cascade-explorer/) · [Report a bug](https://github.com/Idan4956/cascade-explorer/issues/new?template=bug_report.yml) · [Request a feature](https://github.com/Idan4956/cascade-explorer/issues/new?template=feature_request.yml)
+[**Download**](#-download) · [Website](https://idan4956.github.io/cascade-everything/) · [Report a bug](https://github.com/Idan4956/cascade-everything/issues/new?template=bug_report.yml) · [Request a feature](https://github.com/Idan4956/cascade-everything/issues/new?template=feature_request.yml)
 
 </div>
 
@@ -41,16 +41,16 @@ Cascade replaces your OS file manager with a column-based browser that shows you
 
 | Platform | File | Notes |
 |---|---|---|
-| 🪟 Windows | [Cascade-Setup.exe](https://github.com/Idan4956/cascade-explorer/releases/latest/download/Cascade-Setup.exe) | NSIS installer, 64-bit |
-| 🪟 Windows Store | [Cascade.appx](https://github.com/Idan4956/cascade-explorer/releases/latest/download/Cascade.appx) | MSIX package |
-| 🍎 macOS | [Cascade-mac.dmg](https://github.com/Idan4956/cascade-explorer/releases/latest/download/Cascade-mac.dmg) | Universal DMG |
-| 🐧 Linux | [Cascade-linux.AppImage](https://github.com/Idan4956/cascade-explorer/releases/latest/download/Cascade-linux.AppImage) | AppImage, no install needed |
+| 🪟 Windows | [Cascade-Setup.exe](https://github.com/Idan4956/cascade-everything/releases/latest/download/Cascade-Setup.exe) | NSIS installer, 64-bit |
+| 🪟 Windows Store | [Cascade.appx](https://github.com/Idan4956/cascade-everything/releases/latest/download/Cascade.appx) | MSIX package |
+| 🍎 macOS | [Cascade-mac.dmg](https://github.com/Idan4956/cascade-everything/releases/latest/download/Cascade-mac.dmg) | Universal DMG |
+| 🐧 Linux | [Cascade-linux.AppImage](https://github.com/Idan4956/cascade-everything/releases/latest/download/Cascade-linux.AppImage) | AppImage, no install needed |
 
 ### Package managers
 
 **Windows — Scoop**
 ```powershell
-scoop bucket add cascade-explorer https://github.com/Idan4956/cascade-explorer
+scoop bucket add cascade-everything https://github.com/Idan4956/cascade-everything
 scoop install cascade
 ```
 
@@ -61,7 +61,7 @@ winget install Idan4956.Cascade
 
 **macOS — Homebrew** *(coming soon)*
 ```bash
-brew install --cask cascade-explorer
+brew install --cask cascade-everything
 ```
 
 **Linux — AppImage (manual)**
@@ -75,8 +75,8 @@ chmod +x Cascade-linux.AppImage
 Prerequisites: **Node.js 20+**, **Git**
 
 ```bash
-git clone https://github.com/Idan4956/cascade-explorer.git
-cd cascade-explorer
+git clone https://github.com/Idan4956/cascade-everything.git
+cd cascade-everything
 npm install
 
 # Development (hot-reload)
@@ -98,7 +98,7 @@ Installers land in the `release/` directory.
 
 Contributions of any size are welcome — bug fixes, new features, documentation improvements, or just a typo fix.
 
-1. [Fork the repository](https://github.com/Idan4956/cascade-explorer/fork)
+1. [Fork the repository](https://github.com/Idan4956/cascade-everything/fork)
 2. Create a branch: `git checkout -b feat/your-feature`
 3. Commit your changes
 4. Open a pull request
@@ -107,7 +107,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
 ## 📬 Contact
 
-Questions, bug reports, feature requests → [open an issue](https://github.com/Idan4956/cascade-explorer/issues) or email [cascadefileexplorer@gmail.com](mailto:cascadefileexplorer@gmail.com).
+Questions, bug reports, feature requests → [open an issue](https://github.com/Idan4956/cascade-everything/issues) or email [cascadefileeverything@gmail.com](mailto:cascadefileeverything@gmail.com).
 
 ## 📄 License
 
