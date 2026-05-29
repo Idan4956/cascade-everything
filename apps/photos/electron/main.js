@@ -19,11 +19,29 @@ function getLaunchPath() {
   return null
 }
 
+function resolveFromWinShortcut(name) {
+  const lnkPaths = [
+    path.join(process.env.PROGRAMDATA || 'C:\\ProgramData', 'Microsoft', 'Windows', 'Start Menu', 'Programs', `${name}.lnk`),
+    path.join(process.env.APPDATA || '', 'Microsoft', 'Windows', 'Start Menu', 'Programs', `${name}.lnk`),
+  ]
+  for (const lnk of lnkPaths) {
+    try {
+      if (fs.existsSync(lnk)) {
+        const info = shell.readShortcutLink(lnk)
+        if (info.target && fs.existsSync(info.target)) return info.target
+      }
+    } catch {}
+  }
+  return null
+}
+
 function findCascadeExplorer() {
   const p = process.platform
   const home = os.homedir()
   let candidates = []
   if (p === 'win32') {
+    const fromShortcut = resolveFromWinShortcut('Cascade')
+    if (fromShortcut) return fromShortcut
     candidates = [
       path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Cascade', 'Cascade.exe'),
       path.join(process.env.PROGRAMFILES || '', 'Cascade', 'Cascade.exe'),

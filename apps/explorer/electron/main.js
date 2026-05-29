@@ -359,10 +359,28 @@ ipcMain.handle('fs:openExternal', async (_, filePath) => {
   }
 })
 
+function resolveFromWinShortcut(name) {
+  const lnkPaths = [
+    path.join(process.env.PROGRAMDATA || 'C:\\ProgramData', 'Microsoft', 'Windows', 'Start Menu', 'Programs', `${name}.lnk`),
+    path.join(process.env.APPDATA || '', 'Microsoft', 'Windows', 'Start Menu', 'Programs', `${name}.lnk`),
+  ]
+  for (const lnk of lnkPaths) {
+    try {
+      if (fs.existsSync(lnk)) {
+        const info = shell.readShortcutLink(lnk)
+        if (info.target && fs.existsSync(info.target)) return info.target
+      }
+    } catch {}
+  }
+  return null
+}
+
 function findCascadePhotos() {
   const home = os.homedir()
   let candidates = []
   if (process.platform === 'win32') {
+    const fromShortcut = resolveFromWinShortcut('Cascade Photos')
+    if (fromShortcut) return fromShortcut
     candidates = [
       path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Cascade Photos', 'Cascade Photos.exe'),
       path.join(process.env.PROGRAMFILES || '', 'Cascade Photos', 'Cascade Photos.exe'),
