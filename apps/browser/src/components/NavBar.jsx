@@ -595,19 +595,21 @@ function MiniBar({ value, color, label }) {
 function StatRow({ label, value, pct, color }) {
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: pct != null ? 4 : 0 }}>
         <span style={{ fontSize: 11, color: 'var(--muted)' }}>{label}</span>
         <span style={{ fontSize: 11, fontWeight: 700, color, fontVariantNumeric: 'tabular-nums' }}>{value}</span>
       </div>
-      <div style={{ height: 4, background: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden' }}>
-        <div style={{
-          width: `${Math.min(pct, 100)}%`, height: '100%',
-          background: color,
-          borderRadius: 2,
-          transition: 'width 1s ease',
-          boxShadow: `0 0 6px ${color}88`,
-        }} />
-      </div>
+      {pct != null && (
+        <div style={{ height: 4, background: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden' }}>
+          <div style={{
+            width: `${Math.min(pct, 100)}%`, height: '100%',
+            background: color,
+            borderRadius: 2,
+            transition: 'width 1s ease',
+            boxShadow: `0 0 6px ${color}88`,
+          }} />
+        </div>
+      )}
     </div>
   )
 }
@@ -718,11 +720,3 @@ function AdBlockBtn({ enabled, count, onToggle }) {
   )
 }
 
-function StatRow({ label, value, color }) {
-  return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-      <span style={{ fontSize: 12, color: 'var(--muted)' }}>{label}</span>
-      <span style={{ fontSize: 13, fontWeight: 700, color }}>{value}</span>
-    </div>
-  )
-}
