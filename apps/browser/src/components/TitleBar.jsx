@@ -5,7 +5,7 @@ const isMac = window.browserAPI?.platform === 'darwin'
 const WS_COLORS = ['#3b82f6','#8b5cf6','#ec4899','#ef4444','#f59e0b','#10b981','#06b6d4','#f97316']
 
 export default function TitleBar({
-  tabs, allTabs, activeTabId, onSelectTab, onNewTab, onCloseTab, onTabContextMenu,
+  tabs, allTabs, activeTabId, onSelectTab, onNewTab, onNewTabAfter, onCloseTab, onTabContextMenu,
   workspaces, activeWorkspaceId, onSwitchWorkspace, onAddWorkspace, onUpdateWorkspace, onDeleteWorkspace,
 }) {
   const [maximized, setMaximized] = useState(false)
@@ -78,16 +78,18 @@ export default function TitleBar({
         <div style={{ width: 1, height: 18, background: 'var(--border-mid)', flexShrink: 0, margin: '0 6px 0 4px', alignSelf: 'center' }} />
 
         {/* Tabs (aligned to bottom) */}
-        <div style={{ display: 'flex', alignItems: 'flex-end', flex: 1, overflow: 'hidden', height: '100%', gap: 2 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', flex: 1, overflow: 'hidden', height: '100%', gap: 0 }}>
           {tabs.map(tab => (
-            <Tab
-              key={tab.id}
-              tab={tab}
-              active={tab.id === activeTabId}
-              onSelect={() => onSelectTab(tab.id)}
-              onClose={(e) => { e.stopPropagation(); onCloseTab(tab.id) }}
-              onContextMenu={(e) => { e.preventDefault(); onTabContextMenu?.(e, tab.id) }}
-            />
+            <React.Fragment key={tab.id}>
+              <Tab
+                tab={tab}
+                active={tab.id === activeTabId}
+                onSelect={() => onSelectTab(tab.id)}
+                onClose={(e) => { e.stopPropagation(); onCloseTab(tab.id) }}
+                onContextMenu={(e) => { e.preventDefault(); onTabContextMenu?.(e, tab.id) }}
+              />
+              <InsertSlot onInsert={() => onNewTabAfter?.(tab.id)} />
+            </React.Fragment>
           ))}
           <NewTabBtn onClick={onNewTab} />
         </div>
@@ -423,6 +425,49 @@ function Tab({ tab, active, onSelect, onClose, onContextMenu }) {
           <line x1="7" y1="1" x2="1" y2="7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
         </svg>
       </button>
+    </div>
+  )
+}
+
+function InsertSlot({ onInsert }) {
+  const [hov, setHov] = useState(false)
+  return (
+    <div
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      onClick={e => { e.stopPropagation(); onInsert() }}
+      title="Open tab here"
+      style={{
+        width: hov ? 22 : 4,
+        height: 28,
+        alignSelf: 'flex-end',
+        marginBottom: 4,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: hov ? 'pointer' : 'default',
+        transition: 'width 0.15s',
+        flexShrink: 0,
+        zIndex: hov ? 5 : 0,
+      }}
+    >
+      <div style={{
+        width: hov ? 18 : 1,
+        height: hov ? 18 : 14,
+        borderRadius: hov ? '50%' : 1,
+        background: hov ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.07)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        transition: 'all 0.15s',
+        color: 'rgba(255,255,255,0.75)',
+        fontSize: 13,
+        fontWeight: 500,
+        lineHeight: 1,
+        flexShrink: 0,
+      }}>
+        {hov ? '+' : ''}
+      </div>
     </div>
   )
 }

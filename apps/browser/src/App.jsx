@@ -243,6 +243,17 @@ export default function App() {
     })
   }, [])
 
+  const handleNewTabAfter = useCallback((afterTabId) => {
+    const tab = makeTab(null, activeWorkspaceIdRef.current)
+    setTabs(prev => {
+      const idx = prev.findIndex(t => t.id === afterTabId)
+      if (idx < 0) return [...prev, tab]
+      return [...prev.slice(0, idx + 1), tab, ...prev.slice(idx + 1)]
+    })
+    setActiveTabId(tab.id)
+    sounds.tabOpen()
+  }, [])
+
   const handleReopenClosed = useCallback(() => {
     setRecentlyClosed(rc => {
       if (!rc.length) return rc
@@ -491,6 +502,7 @@ export default function App() {
           activeWorkspaceId={activeWorkspaceId}
           onSelectTab={setActiveTabId}
           onNewTab={() => handleNewTab()}
+          onNewTabAfter={handleNewTabAfter}
           onCloseTab={handleCloseTab}
           onTabContextMenu={(e, tabId) => setContextMenu({ tabId, x: e.clientX, y: e.clientY })}
           onSwitchWorkspace={handleSwitchWorkspace}
