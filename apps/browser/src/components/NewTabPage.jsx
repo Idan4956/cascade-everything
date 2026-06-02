@@ -58,7 +58,7 @@ function formatDateStr() {
   return new Date().toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })
 }
 
-export default function NewTabPage({ onNavigate }) {
+export default function NewTabPage({ onNavigate, onOpenSettings }) {
   const [query, setQuery] = useState('')
   const [time, setTime] = useState(formatClock)
   const [dateStr] = useState(formatDateStr)
@@ -86,7 +86,12 @@ export default function NewTabPage({ onNavigate }) {
       padding: '12vh 32px 32px',
       overflowY: 'auto',
       userSelect: 'none',
+      position: 'relative',
     }}>
+      {/* Settings button */}
+      {onOpenSettings && (
+        <SettingsBtn onClick={onOpenSettings} />
+      )}
       <div style={{
         display: 'flex',
         flexDirection: 'column',
@@ -196,6 +201,39 @@ export default function NewTabPage({ onNavigate }) {
         </div>
       </div>
     </div>
+  )
+}
+
+function SettingsBtn({ onClick }) {
+  const [hov, setHov] = useState(false)
+  return (
+    <button
+      onClick={onClick}
+      title="Settings"
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        position: 'absolute',
+        top: 16,
+        right: 16,
+        width: 36,
+        height: 36,
+        borderRadius: 10,
+        border: 'none',
+        background: hov ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)',
+        color: hov ? 'var(--text)' : 'var(--muted)',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        transition: 'background 0.15s, color 0.15s',
+      }}
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="3" />
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+      </svg>
+    </button>
   )
 }
 

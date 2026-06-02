@@ -12,6 +12,9 @@ contextBridge.exposeInMainWorld('browserAPI', {
   addHistory: (entry) => ipcRenderer.invoke('browser:addHistory', entry),
   clearHistory: () => ipcRenderer.invoke('browser:clearHistory'),
 
+  getSettings: () => ipcRenderer.invoke('browser:getSettings'),
+  setSettings: (s) => ipcRenderer.invoke('browser:setSettings', s),
+
   onDownloadStart: (cb) => {
     ipcRenderer.on('browser:downloadStart', (_, d) => cb(d))
     return () => ipcRenderer.removeAllListeners('browser:downloadStart')

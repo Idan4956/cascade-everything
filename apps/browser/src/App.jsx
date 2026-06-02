@@ -4,6 +4,8 @@ import NavBar from './components/NavBar.jsx'
 import TabWebView from './components/TabWebView.jsx'
 import SidePanel from './components/SidePanel.jsx'
 import FindBar from './components/FindBar.jsx'
+import TabContextMenu from './components/TabContextMenu.jsx'
+import SettingsPage from './components/SettingsPage.jsx'
 
 const styles = `
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -51,12 +53,19 @@ function makeTab(url = null) {
   }
 }
 
-function normalizeUrl(raw) {
+const SEARCH_URLS = {
+  google: q => `https://www.google.com/search?q=${encodeURIComponent(q)}`,
+  bing: q => `https://www.bing.com/search?q=${encodeURIComponent(q)}`,
+  duckduckgo: q => `https://duckduckgo.com/?q=${encodeURIComponent(q)}`,
+  brave: q => `https://search.brave.com/search?q=${encodeURIComponent(q)}`,
+}
+
+function normalizeUrl(raw, searchEngine = 'google') {
   const url = raw.trim()
   if (!url) return null
   if (/^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(url) || url.startsWith('about:')) return url
   if (url.includes('.') && !url.includes(' ')) return 'https://' + url
-  return `https://www.google.com/search?q=${encodeURIComponent(url)}`
+  return (SEARCH_URLS[searchEngine] || SEARCH_URLS.google)(url)
 }
 
 export default function App() {
@@ -69,11 +78,19 @@ export default function App() {
   const [findActive, setFindActive] = useState(false)
   const [findQuery, setFindQuery] = useState('')
   const [addrFocusTick, setAddrFocusTick] = useState(0)
+  const [contextMenu, setContextMenu] = useState(null)
+  const [recentlyClosed, setRecentlyClosed] = useState([])
+  const [settings, setSettings] = useState({ searchEngine: 'google' })
+  const [showSettings, setShowSettings] = useState(false)
   const webviewRefs = useRef({})
+  const settingsRef = useRef(settings)
+
+  useEffect(() => { settingsRef.current = settings }, [settings])
 
   useEffect(() => {
     window.browserAPI?.getBookmarks().then(setBookmarks)
     window.browserAPI?.getHistory().then(setHistory)
+    window.browserAPI?.getSettings().then(s => { if (s && Object.keys(s).length) setSettings(s) })
     const u1 = window.browserAPI?.onDownloadStart(d => setDownloads(prev => [...prev, d]))
     const u2 = window.browserAPI?.onDownloadDone(d => setDownloads(prev =>
       prev.map(dl => dl.savePath === d.savePath ? { ...dl, done: true, state: d.state } : dl)
@@ -86,7 +103,7 @@ export default function App() {
   }, [])
 
   const navigateTo = useCallback((tabId, rawUrl) => {
-    const url = normalizeUrl(rawUrl)
+    const url = normalizeUrl(rawUrl, settingsRef.current?.searchEngine)
     if (!url) return
 
     setTabs(prev => {
@@ -114,8 +131,12 @@ export default function App() {
     return tab.id
   }, [])
 
-  const handleCloseTab = useCallback((id) => {
+  const closeTabById = useCallback((id) => {
     setTabs(prev => {
+      const tab = prev.find(t => t.id === id)
+      if (tab && !tab.isNewTab && tab.displayUrl) {
+        setRecentlyClosed(rc => [...rc.slice(-9), { url: tab.displayUrl, title: tab.title, favicon: tab.favicon }])
+      }
       if (prev.length === 1) {
         const fresh = makeTab()
         setActiveTabId(fresh.id)
@@ -131,6 +152,64 @@ export default function App() {
       return next
     })
   }, [])
+
+  const handleCloseTab = closeTabById
+
+  const handleDuplicateTab = useCallback((id) => {
+    setTabs(prev => {
+      const tab = prev.find(t => t.id === id)
+      if (!tab) return prev
+      const dup = makeTab(tab.displayUrl || null)
+      const idx = prev.findIndex(t => t.id === id)
+      const next = [...prev.slice(0, idx + 1), dup, ...prev.slice(idx + 1)]
+      setActiveTabId(dup.id)
+      return next
+    })
+  }, [])
+
+  const handlePinTab = useCallback((id) => {
+    setTabs(prev => prev.map(t => t.id === id ? { ...t, pinned: !t.pinned } : t))
+  }, [])
+
+  const handleReloadTab = useCallback((id) => {
+    setTabs(prev => {
+      const tab = prev.find(t => t.id === id)
+      if (!tab) return prev
+      if (tab.loading) webviewRefs.current[id]?.stop()
+      else webviewRefs.current[id]?.reload()
+      return prev
+    })
+  }, [])
+
+  const handleCloseOtherTabs = useCallback((id) => {
+    setTabs(prev => {
+      const tab = prev.find(t => t.id === id)
+      if (!tab) return prev
+      prev.filter(t => t.id !== id).forEach(t => { delete webviewRefs.current[t.id] })
+      setActiveTabId(id)
+      return [tab]
+    })
+  }, [])
+
+  const handleCloseTabsToRight = useCallback((id) => {
+    setTabs(prev => {
+      const idx = prev.findIndex(t => t.id === id)
+      if (idx < 0) return prev
+      prev.slice(idx + 1).forEach(t => { delete webviewRefs.current[t.id] })
+      const next = prev.slice(0, idx + 1)
+      setActiveTabId(cur => next.find(t => t.id === cur) ? cur : next[next.length - 1].id)
+      return next
+    })
+  }, [])
+
+  const handleReopenClosed = useCallback(() => {
+    setRecentlyClosed(rc => {
+      if (!rc.length) return rc
+      const last = rc[rc.length - 1]
+      handleNewTab(last.url)
+      return rc.slice(0, -1)
+    })
+  }, [handleNewTab])
 
   const handleReload = useCallback(() => {
     setTabs(prev => {
@@ -160,6 +239,18 @@ export default function App() {
     setFindQuery('')
     updateTab(activeTabId, { findCount: null })
   }, [activeTabId, updateTab])
+
+  const handleSaveSettings = useCallback(async (s) => {
+    setSettings(s)
+    await window.browserAPI?.setSettings(s)
+  }, [])
+
+  const handleClearBookmarks = useCallback(async () => {
+    for (const bm of bookmarks) {
+      await window.browserAPI?.removeBookmark(bm.url)
+    }
+    setBookmarks([])
+  }, [bookmarks])
 
   const handleBookmarkSave = useCallback(async (bm) => {
     const updated = await window.browserAPI?.addBookmark(bm)
@@ -216,10 +307,12 @@ export default function App() {
         })
       }
       if (e.key === 'Escape' && findActive) handleFindClose()
+      if (e.key === 'Escape' && contextMenu) setContextMenu(null)
+      if (e.key === 'Escape' && showSettings) setShowSettings(false)
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [activeTabId, findActive, findQuery, handleNewTab, handleCloseTab, handleReload, handleFindClose])
+  }, [activeTabId, findActive, findQuery, contextMenu, showSettings, handleNewTab, handleCloseTab, handleReload, handleFindClose])
 
   // Update history list after navigation
   useEffect(() => {
@@ -241,6 +334,7 @@ export default function App() {
           onSelectTab={setActiveTabId}
           onNewTab={() => handleNewTab()}
           onCloseTab={handleCloseTab}
+          onTabContextMenu={(e, tabId) => setContextMenu({ tabId, x: e.clientX, y: e.clientY })}
         />
         <NavBar
           tab={activeTab}
@@ -288,6 +382,7 @@ export default function App() {
                 onUpdate={updateTab}
                 onNewTab={handleNewTab}
                 onNavigate={navigateTo}
+                onOpenSettings={() => setShowSettings(true)}
                 webviewRefs={webviewRefs}
               />
             ))}
@@ -302,9 +397,41 @@ export default function App() {
                 onClose={handleFindClose}
               />
             )}
+
+            {showSettings && (
+              <SettingsPage
+                settings={settings}
+                onSave={handleSaveSettings}
+                onClose={() => setShowSettings(false)}
+                onClearHistory={async () => {
+                  await window.browserAPI?.clearHistory()
+                  setHistory([])
+                }}
+                onClearBookmarks={handleClearBookmarks}
+              />
+            )}
           </div>
         </div>
       </div>
+
+      {contextMenu && (
+        <TabContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          tab={tabs.find(t => t.id === contextMenu.tabId)}
+          tabs={tabs}
+          recentlyClosed={recentlyClosed}
+          onClose={() => setContextMenu(null)}
+          onNewTab={() => handleNewTab()}
+          onDuplicate={handleDuplicateTab}
+          onPin={handlePinTab}
+          onReloadTab={handleReloadTab}
+          onCloseTab={handleCloseTab}
+          onCloseOthers={handleCloseOtherTabs}
+          onCloseToRight={handleCloseTabsToRight}
+          onReopenClosed={handleReopenClosed}
+        />
+      )}
     </>
   )
 }

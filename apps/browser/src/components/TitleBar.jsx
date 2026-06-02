@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 
 const isMac = window.browserAPI?.platform === 'darwin'
 
-export default function TitleBar({ tabs, activeTabId, onSelectTab, onNewTab, onCloseTab }) {
+export default function TitleBar({ tabs, activeTabId, onSelectTab, onNewTab, onCloseTab, onTabContextMenu }) {
   const [maximized, setMaximized] = useState(false)
 
   useEffect(() => {
@@ -69,6 +69,7 @@ export default function TitleBar({ tabs, activeTabId, onSelectTab, onNewTab, onC
             active={tab.id === activeTabId}
             onSelect={() => onSelectTab(tab.id)}
             onClose={(e) => { e.stopPropagation(); onCloseTab(tab.id) }}
+            onContextMenu={(e) => { e.preventDefault(); onTabContextMenu?.(e, tab.id) }}
           />
         ))}
 
@@ -92,13 +93,56 @@ export default function TitleBar({ tabs, activeTabId, onSelectTab, onNewTab, onC
   )
 }
 
-function Tab({ tab, active, onSelect, onClose }) {
+function Tab({ tab, active, onSelect, onClose, onContextMenu }) {
   const [hov, setHov] = useState(false)
+
+  if (tab.pinned) {
+    return (
+      <div
+        className={`tab-row${active ? ' tab-active' : ''}`}
+        onClick={onSelect}
+        onContextMenu={onContextMenu}
+        onMouseEnter={() => setHov(true)}
+        onMouseLeave={() => setHov(false)}
+        title={tab.title}
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          height: active ? 33 : 31,
+          width: 36, minWidth: 36, flexShrink: 0,
+          padding: '0 6px',
+          borderRadius: '8px 8px 0 0',
+          background: active ? 'var(--surface)' : hov ? 'rgba(255,255,255,0.06)' : 'transparent',
+          cursor: 'pointer',
+          borderTop: active ? '2px solid var(--accent)' : '2px solid transparent',
+          borderLeft: active ? '1px solid var(--border-mid)' : '1px solid transparent',
+          borderRight: active ? '1px solid var(--border-mid)' : '1px solid transparent',
+          borderBottom: 'none',
+          marginBottom: active ? -1 : 0,
+          alignSelf: 'flex-end',
+          transition: 'background 0.1s',
+          position: 'relative',
+        }}
+      >
+        <div style={{ width: 14, height: 14, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {tab.loading ? (
+            <div style={{ width: 12, height: 12, borderRadius: '50%', border: '1.5px solid rgba(59,130,246,0.35)', borderTopColor: 'var(--accent)', animation: 'tabspin 0.7s linear infinite' }} />
+          ) : tab.favicon ? (
+            <img src={tab.favicon} width={14} height={14} style={{ borderRadius: 2 }} onError={e => { e.target.style.display = 'none' }} />
+          ) : (
+            <GlobeIcon color={active ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.25)'} />
+          )}
+        </div>
+        {/* Pin indicator */}
+        <div style={{ position: 'absolute', top: 3, right: 3, width: 5, height: 5, borderRadius: '50%', background: 'var(--accent)', opacity: 0.8 }} />
+      </div>
+    )
+  }
 
   return (
     <div
       className={`tab-row${active ? ' tab-active' : ''}`}
       onClick={onSelect}
+      onContextMenu={onContextMenu}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       title={tab.title}

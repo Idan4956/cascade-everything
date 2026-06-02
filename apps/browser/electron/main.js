@@ -12,7 +12,7 @@ function dataPath() {
 
 function loadData() {
   try { return JSON.parse(fs.readFileSync(dataPath(), 'utf8')) }
-  catch { return { bookmarks: [], history: [] } }
+  catch { return { bookmarks: [], history: [], settings: {} } }
 }
 
 function saveData(d) {
@@ -125,6 +125,15 @@ ipcMain.handle('browser:addHistory', (_, entry) => {
 ipcMain.handle('browser:clearHistory', () => {
   const d = loadData()
   d.history = []
+  saveData(d)
+  return true
+})
+
+ipcMain.handle('browser:getSettings', () => loadData().settings || {})
+
+ipcMain.handle('browser:setSettings', (_, settings) => {
+  const d = loadData()
+  d.settings = settings
   saveData(d)
   return true
 })
