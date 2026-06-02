@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, shell, session } from 'electron'
+import { app, BrowserWindow, ipcMain, shell, session, nativeTheme, webContents } from 'electron'
 import { join } from 'path'
 import path from 'path'
 import fs from 'fs'
@@ -47,6 +47,30 @@ function createWindow() {
   }
 }
 
+// System stats
+let netBytesPerInterval = 0
+let forceDarkMode = false
+
+function startSysMonitor() {
+  process.getCPUUsage() // prime the counter
+  setInterval(() => {
+    try {
+      const metrics = app.getAppMetrics()
+      const totalCPU = Math.min(metrics.reduce((s, m) => s + (m.cpu?.percentCPUUsage || 0), 0), 1)
+      const totalMemKB = metrics.reduce((s, m) => s + (m.memory?.workingSetSize || 0), 0)
+      const sys = process.getSystemMemoryInfo()
+      const netKBs = Math.round(netBytesPerInterval / 2 / 1024)
+      netBytesPerInterval = 0
+      mainWin?.webContents.send('browser:sysStats', {
+        cpu: totalCPU,
+        ram: (sys.total - sys.free) / sys.total,
+        memMB: Math.round(totalMemKB / 1024),
+        netKBs,
+      })
+    } catch {}
+  }, 2000)
+}
+
 // Throttled IPC broadcast for blocked count
 let countTimer = null
 function broadcastCount() {
@@ -63,6 +87,14 @@ app.whenReady().then(() => {
   const savedSettings = loadData().settings || {}
   if (savedSettings.adBlockEnabled === false) adblock.setEnabled(false)
 
+  // Track network bytes for speed meter
+  session.defaultSession.webRequest.onCompleted((details) => {
+    if (!details.fromCache) {
+      const len = parseInt(details.responseHeaders?.['content-length']?.[0] || '0')
+      if (len > 0) netBytesPerInterval += len
+    }
+  })
+
   // Network-level ad blocking
   session.defaultSession.webRequest.onBeforeRequest({ urls: ['<all_urls>'] }, (details, callback) => {
     if (adblock.shouldBlock(details.url)) {
@@ -73,12 +105,10 @@ app.whenReady().then(() => {
     }
   })
 
-  // Cosmetic CSS injection into every webview page
+  // CSS injection into every webview page
   app.on('web-contents-created', (_, contents) => {
     contents.on('did-finish-load', () => {
-      if (adblock.isEnabled()) {
-        contents.insertCSS(adblock.AD_CSS).catch(() => {})
-      }
+      if (adblock.isEnabled()) contents.insertCSS(adblock.AD_CSS).catch(() => {})
     })
   })
 
@@ -116,6 +146,13 @@ app.whenReady().then(() => {
   })
 
   createWindow()
+  startSysMonitor()
+
+  // Apply saved dark mode preference
+  if (loadData().settings?.forceDarkMode) {
+    forceDarkMode = true
+    nativeTheme.themeSource = 'dark'
+  }
 })
 
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit() })
@@ -194,4 +231,28 @@ ipcMain.handle('browser:setAdBlockEnabled', (_, enabled) => {
 ipcMain.handle('browser:resetAdBlockCount', () => {
   adblock.resetCount()
   return 0
+})
+
+ipcMain.on('browser:setForceDarkMode', (_, enabled) => {
+  forceDarkMode = enabled
+  nativeTheme.themeSource = enabled ? 'dark' : 'system'
+  const d = loadData()
+  d.settings = { ...(d.settings || {}), forceDarkMode: enabled }
+  saveData(d)
+})
+
+ipcMain.handle('browser:screenshot', async (_, wcId) => {
+  try {
+    const wc = webContents.fromId(wcId)
+    if (!wc) return { error: 'WebContents not found' }
+    const image = await wc.capturePage()
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)
+    const filename = `screenshot-${timestamp}.png`
+    const savePath = path.join(app.getPath('pictures'), filename)
+    fs.writeFileSync(savePath, image.toPNG())
+    shell.showItemInFolder(savePath)
+    return { path: savePath, filename }
+  } catch (e) {
+    return { error: e.message }
+  }
 })

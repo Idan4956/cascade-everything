@@ -23,6 +23,14 @@ contextBridge.exposeInMainWorld('browserAPI', {
     return () => ipcRenderer.removeAllListeners('browser:adBlockCount')
   },
 
+  setForceDarkMode: (v) => ipcRenderer.send('browser:setForceDarkMode', v),
+  screenshot: (wcId) => ipcRenderer.invoke('browser:screenshot', wcId),
+
+  onSysStats: (cb) => {
+    ipcRenderer.on('browser:sysStats', (_, s) => cb(s))
+    return () => ipcRenderer.removeAllListeners('browser:sysStats')
+  },
+
   onDownloadStart: (cb) => {
     ipcRenderer.on('browser:downloadStart', (_, d) => cb(d))
     return () => ipcRenderer.removeAllListeners('browser:downloadStart')

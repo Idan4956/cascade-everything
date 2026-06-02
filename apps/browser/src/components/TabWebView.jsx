@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import NewTabPage from './NewTabPage.jsx'
 
-export default function TabWebView({ tab, active, onUpdate, onNewTab, onNavigate, onOpenSettings, webviewRefs }) {
+export default function TabWebView({ tab, active, onUpdate, onNewTab, onNavigate, onOpenSettings, onWebContentsReady, newTabBackground, webviewRefs }) {
   const wvRef = useRef(null)
   const [ready, setReady] = useState(false)
 
@@ -14,6 +14,7 @@ export default function TabWebView({ tab, active, onUpdate, onNewTab, onNavigate
     if (!wv || !ready) return
 
     webviewRefs.current[tab.id] = wv
+    onWebContentsReady?.(tab.id, wv.getWebContentsId())
 
     const onStartLoad = () => onUpdate(tab.id, { loading: true })
 
@@ -94,7 +95,7 @@ export default function TabWebView({ tab, active, onUpdate, onNewTab, onNavigate
       flexDirection: 'column',
     }}>
       {tab.isNewTab && (
-        <NewTabPage onNavigate={(url) => onNavigate(tab.id, url)} onOpenSettings={onOpenSettings} />
+        <NewTabPage onNavigate={(url) => onNavigate(tab.id, url)} onOpenSettings={onOpenSettings} background={newTabBackground} />
       )}
 
       <webview

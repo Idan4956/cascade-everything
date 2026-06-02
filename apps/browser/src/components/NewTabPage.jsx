@@ -58,7 +58,7 @@ function formatDateStr() {
   return new Date().toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })
 }
 
-export default function NewTabPage({ onNavigate, onOpenSettings }) {
+export default function NewTabPage({ onNavigate, onOpenSettings, background }) {
   const [query, setQuery] = useState('')
   const [time, setTime] = useState(formatClock)
   const [dateStr] = useState(formatDateStr)
@@ -82,7 +82,7 @@ export default function NewTabPage({ onNavigate, onOpenSettings }) {
       alignItems: 'center',
       justifyContent: 'flex-start',
       paddingTop: '12vh',
-      background: 'radial-gradient(ellipse at 50% 0%, rgba(59,130,246,0.08) 0%, transparent 60%), var(--bg)',
+      background: background || 'radial-gradient(ellipse at 50% 0%, rgba(59,130,246,0.08) 0%, transparent 60%), var(--bg)',
       padding: '12vh 32px 32px',
       overflowY: 'auto',
       userSelect: 'none',

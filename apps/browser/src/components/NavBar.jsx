@@ -2,10 +2,10 @@ import React, { useState, useRef, useEffect, useCallback } from 'react'
 
 export default function NavBar({
   tab, bookmarks, downloads, showPanel, findActive, addrFocusTick,
-  adBlockEnabled, adBlockCount,
+  adBlockEnabled, adBlockCount, sysStats,
   onNavigate, onBack, onForward, onReload, onHome,
   onBookmarkSave, onBookmarkUpdate, onBookmarkRemove,
-  onTogglePanel, onFind, onToggleAdBlock,
+  onTogglePanel, onFind, onToggleAdBlock, onPiP, onScreenshot,
 }) {
   const [inputVal, setInputVal] = useState('')
   const [focused, setFocused] = useState(false)
@@ -120,6 +120,9 @@ export default function NavBar({
           </svg>
         </NavBtn>
       </div>
+
+      {/* GX Stats */}
+      {sysStats && <GXStats stats={sysStats} />}
 
       {/* Centered address bar wrapper */}
       <div style={{
@@ -336,6 +339,23 @@ export default function NavBar({
           </svg>
         </NavBtn>
 
+        {/* Picture-in-Picture */}
+        <NavBtn onClick={onPiP} title="Picture-in-picture  (plays floating video)" size={30}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="2" y="4" width="20" height="16" rx="2" />
+            <rect x="12" y="11" width="9" height="7" rx="1" fill="currentColor" stroke="none" opacity="0.5" />
+            <rect x="12" y="11" width="9" height="7" rx="1" />
+          </svg>
+        </NavBtn>
+
+        {/* Screenshot */}
+        <NavBtn onClick={onScreenshot} title="Screenshot  (saves to Pictures)" size={30}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+            <circle cx="12" cy="13" r="4" />
+          </svg>
+        </NavBtn>
+
         {/* Ad blocker */}
         <AdBlockBtn
           enabled={adBlockEnabled}
@@ -484,6 +504,110 @@ function DownloadsBtn({ downloads }) {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+function GXStats({ stats }) {
+  const [show, setShow] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    const h = (e) => { if (!ref.current?.contains(e.target)) setShow(false) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [])
+
+  const cpu = Math.round((stats.cpu || 0) * 100)
+  const ram = Math.round((stats.ram || 0) * 100)
+  const net = stats.netKBs || 0
+
+  function fmtNet(n) {
+    if (n >= 1024) return `${(n/1024).toFixed(1)}M`
+    if (n > 0) return `${n}K`
+    return '0K'
+  }
+
+  return (
+    <div ref={ref} style={{ position: 'relative', flexShrink: 0 }}>
+      <button
+        onClick={() => setShow(v => !v)}
+        title="GX Monitor"
+        style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          padding: '4px 8px', borderRadius: 8, border: 'none',
+          background: show ? 'rgba(255,255,255,0.08)' : 'transparent',
+          cursor: 'pointer', height: 30,
+          transition: 'background 0.1s',
+        }}
+        onMouseEnter={e => { if (!show) e.currentTarget.style.background = 'rgba(255,255,255,0.06)' }}
+        onMouseLeave={e => { if (!show) e.currentTarget.style.background = 'transparent' }}
+      >
+        <MiniBar value={cpu} color="var(--accent)" label="CPU" />
+        <MiniBar value={ram} color="#8b5cf6" label="RAM" />
+      </button>
+
+      {show && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 10px)', left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 300, width: 220,
+          background: 'var(--surface2)',
+          border: '1px solid var(--border-mid)',
+          borderRadius: 12,
+          boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
+          padding: '14px 16px',
+        }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 12 }}>
+            GX Monitor
+          </div>
+          <StatRow label="CPU Usage" value={`${cpu}%`} pct={cpu} color="var(--accent)" />
+          <div style={{ height: 10 }} />
+          <StatRow label="RAM Usage" value={`${Math.round(stats.memMB || 0)} MB`} pct={ram} color="#8b5cf6" />
+          <div style={{ height: 10 }} />
+          <StatRow label="Network" value={`${fmtNet(net)}/s`} pct={Math.min(net / 10, 100)} color="#10b981" />
+          <div style={{ marginTop: 12, fontSize: 10, color: 'rgba(255,255,255,0.2)', textAlign: 'center' }}>
+            Updates every 2 seconds
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function MiniBar({ value, color, label }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, width: 32 }}>
+      <div style={{ width: '100%', height: 3, background: 'rgba(255,255,255,0.1)', borderRadius: 2, overflow: 'hidden' }}>
+        <div style={{
+          width: `${Math.min(value, 100)}%`, height: '100%',
+          background: color,
+          borderRadius: 2,
+          transition: 'width 1s ease',
+          boxShadow: `0 0 4px ${color}`,
+        }} />
+      </div>
+      <div style={{ fontSize: 9, color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>{label} {value}%</div>
+    </div>
+  )
+}
+
+function StatRow({ label, value, pct, color }) {
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+        <span style={{ fontSize: 11, color: 'var(--muted)' }}>{label}</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color, fontVariantNumeric: 'tabular-nums' }}>{value}</span>
+      </div>
+      <div style={{ height: 4, background: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden' }}>
+        <div style={{
+          width: `${Math.min(pct, 100)}%`, height: '100%',
+          background: color,
+          borderRadius: 2,
+          transition: 'width 1s ease',
+          boxShadow: `0 0 6px ${color}88`,
+        }} />
+      </div>
     </div>
   )
 }

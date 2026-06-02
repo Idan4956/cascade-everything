@@ -6,6 +6,7 @@ import SidePanel from './components/SidePanel.jsx'
 import FindBar from './components/FindBar.jsx'
 import TabContextMenu from './components/TabContextMenu.jsx'
 import SettingsPage from './components/SettingsPage.jsx'
+import { sounds, setSoundsEnabled } from './utils/sounds.js'
 
 const styles = `
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -38,9 +39,10 @@ const styles = `
 `
 
 let tabIdCounter = 1
-function makeTab(url = null) {
+function makeTab(url = null, workspaceId = 'ws_1') {
   return {
     id: String(tabIdCounter++),
+    workspaceId,
     displayUrl: url || '',
     title: url ? 'Loading…' : 'New Tab',
     favicon: null,
@@ -51,6 +53,19 @@ function makeTab(url = null) {
     initialUrl: url || 'about:blank',
     findCount: null,
   }
+}
+
+const WS_COLORS = ['#3b82f6','#8b5cf6','#ec4899','#ef4444','#f59e0b','#10b981','#06b6d4','#f97316']
+let wsCounter = 1
+function makeWorkspace(name, color) {
+  return { id: `ws_${wsCounter++}`, name: name || 'Workspace', color: color || WS_COLORS[0] }
+}
+
+function hexToRgba(hex, a) {
+  const r = parseInt(hex.slice(1,3), 16)
+  const g = parseInt(hex.slice(3,5), 16)
+  const b = parseInt(hex.slice(5,7), 16)
+  return `rgba(${r},${g},${b},${a})`
 }
 
 const SEARCH_URLS = {
@@ -85,15 +100,31 @@ export default function App() {
   const [adBlockEnabled, setAdBlockEnabled] = useState(true)
   const [adBlockCount, setAdBlockCount] = useState(0)
   const [adBlockDomains, setAdBlockDomains] = useState(0)
+  const [workspaces, setWorkspaces] = useState([{ id: 'ws_1', name: 'Main', color: '#3b82f6' }])
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState('ws_1')
+  const [sysStats, setSysStats] = useState({ cpu: 0, ram: 0, memMB: 0, netKBs: 0 })
   const webviewRefs = useRef({})
+  const wcIdsRef = useRef({})
   const settingsRef = useRef(settings)
+  const activeWorkspaceIdRef = useRef('ws_1')
 
   useEffect(() => { settingsRef.current = settings }, [settings])
+  useEffect(() => { activeWorkspaceIdRef.current = activeWorkspaceId }, [activeWorkspaceId])
 
   useEffect(() => {
     window.browserAPI?.getBookmarks().then(setBookmarks)
     window.browserAPI?.getHistory().then(setHistory)
-    window.browserAPI?.getSettings().then(s => { if (s && Object.keys(s).length) setSettings(s) })
+    window.browserAPI?.getSettings().then(s => {
+      if (s && Object.keys(s).length) {
+        setSettings(s)
+        if (s.soundsEnabled === false) setSoundsEnabled(false)
+        if (s.workspaces?.length) {
+          setWorkspaces(s.workspaces)
+          setActiveWorkspaceId(s.workspaces[0].id)
+          activeWorkspaceIdRef.current = s.workspaces[0].id
+        }
+      }
+    })
     window.browserAPI?.getAdBlockStats().then(s => {
       if (s) { setAdBlockEnabled(s.enabled); setAdBlockCount(s.blocked); setAdBlockDomains(s.domains) }
     })
@@ -102,7 +133,8 @@ export default function App() {
       prev.map(dl => dl.savePath === d.savePath ? { ...dl, done: true, state: d.state } : dl)
     ))
     const u3 = window.browserAPI?.onAdBlockCount(n => setAdBlockCount(n))
-    return () => { u1?.(); u2?.(); u3?.() }
+    const u4 = window.browserAPI?.onSysStats(s => setSysStats(s))
+    return () => { u1?.(); u2?.(); u3?.(); u4?.() }
   }, [])
 
   const updateTab = useCallback((id, patch) => {
@@ -131,14 +163,16 @@ export default function App() {
     })
   }, [])
 
-  const handleNewTab = useCallback((url = null) => {
-    const tab = makeTab(url)
+  const handleNewTab = useCallback((url = null, wsId = null) => {
+    const tab = makeTab(url, wsId || activeWorkspaceIdRef.current)
     setTabs(prev => [...prev, tab])
     setActiveTabId(tab.id)
+    sounds.tabOpen()
     return tab.id
   }, [])
 
   const closeTabById = useCallback((id) => {
+    sounds.tabClose()
     setTabs(prev => {
       const tab = prev.find(t => t.id === id)
       if (tab && !tab.isNewTab && tab.displayUrl) {
@@ -218,6 +252,96 @@ export default function App() {
     })
   }, [handleNewTab])
 
+  const handleSwitchWorkspace = useCallback((wsId) => {
+    setActiveWorkspaceId(wsId)
+    activeWorkspaceIdRef.current = wsId
+    sounds.workspaceSwitch()
+    setTabs(prev => {
+      const wsTabs = prev.filter(t => t.workspaceId === wsId)
+      if (wsTabs.length === 0) {
+        const newTab = makeTab(null, wsId)
+        setActiveTabId(newTab.id)
+        return [...prev, newTab]
+      }
+      setActiveTabId(wsTabs[wsTabs.length - 1].id)
+      return prev
+    })
+  }, [])
+
+  const handleAddWorkspace = useCallback((name, color) => {
+    const ws = makeWorkspace(name, color)
+    setWorkspaces(prev => {
+      const next = [...prev, ws]
+      setSettings(s => {
+        const updated = { ...s, workspaces: next }
+        window.browserAPI?.setSettings(updated)
+        return updated
+      })
+      return next
+    })
+    handleSwitchWorkspace(ws.id)
+    return ws.id
+  }, [handleSwitchWorkspace])
+
+  const handleUpdateWorkspace = useCallback((wsId, patch) => {
+    setWorkspaces(prev => {
+      const next = prev.map(w => w.id === wsId ? { ...w, ...patch } : w)
+      setSettings(s => {
+        const updated = { ...s, workspaces: next }
+        window.browserAPI?.setSettings(updated)
+        return updated
+      })
+      return next
+    })
+  }, [])
+
+  const handleDeleteWorkspace = useCallback((wsId) => {
+    setWorkspaces(prev => {
+      if (prev.length <= 1) return prev
+      const next = prev.filter(w => w.id !== wsId)
+      setSettings(s => {
+        const updated = { ...s, workspaces: next }
+        window.browserAPI?.setSettings(updated)
+        return updated
+      })
+      // Close all tabs in this workspace
+      setTabs(tabs => {
+        const remaining = tabs.filter(t => t.workspaceId !== wsId)
+        if (remaining.length === 0) {
+          const fresh = makeTab(null, next[0].id)
+          setActiveTabId(fresh.id)
+          setActiveWorkspaceId(next[0].id)
+          activeWorkspaceIdRef.current = next[0].id
+          return [fresh]
+        }
+        setActiveWorkspaceId(next[0].id)
+        activeWorkspaceIdRef.current = next[0].id
+        setActiveTabId(remaining[remaining.length - 1].id)
+        return remaining
+      })
+      return next
+    })
+  }, [])
+
+  const handlePiP = useCallback(() => {
+    const wv = webviewRefs.current[activeTabId]
+    if (!wv) return
+    wv.executeJavaScript(`
+      (function() {
+        const v = [...document.querySelectorAll('video')].find(v => !v.paused) || document.querySelector('video')
+        if (v) v.requestPictureInPicture().catch(() => {})
+        return !!v
+      })()
+    `).catch(() => {})
+  }, [activeTabId])
+
+  const handleScreenshot = useCallback(async () => {
+    const wcId = wcIdsRef.current[activeTabId]
+    if (!wcId) return
+    sounds.screenshot()
+    await window.browserAPI?.screenshot(wcId)
+  }, [activeTabId])
+
   const handleReload = useCallback(() => {
     setTabs(prev => {
       const tab = prev.find(t => t.id === activeTabId)
@@ -255,6 +379,12 @@ export default function App() {
   const handleSaveSettings = useCallback(async (s) => {
     setSettings(s)
     await window.browserAPI?.setSettings(s)
+    if (s.forceDarkMode !== undefined) {
+      window.browserAPI?.setForceDarkMode(s.forceDarkMode)
+    }
+    if (s.soundsEnabled !== undefined) {
+      setSoundsEnabled(s.soundsEnabled !== false)
+    }
   }, [])
 
   const handleClearBookmarks = useCallback(async () => {
@@ -334,19 +464,39 @@ export default function App() {
     return () => clearTimeout(timer)
   }, [tabs])
 
+  const handleWebContentsReady = useCallback((tabId, wcId) => {
+    wcIdsRef.current[tabId] = wcId
+  }, [])
+
   const activeTab = tabs.find(t => t.id === activeTabId) || tabs[0]
+  const workspaceTabs = tabs.filter(t => t.workspaceId === activeWorkspaceId)
+  const accent = settings.accentColor || '#3b82f6'
 
   return (
     <>
       <style>{styles}</style>
+      {accent !== '#3b82f6' && (
+        <style>{`:root {
+          --accent: ${accent};
+          --accent-soft: ${hexToRgba(accent, 0.15)};
+          --accent-hover: ${hexToRgba(accent, 0.25)};
+        }`}</style>
+      )}
       <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
         <TitleBar
-          tabs={tabs}
+          tabs={workspaceTabs}
+          allTabs={tabs}
           activeTabId={activeTabId}
+          workspaces={workspaces}
+          activeWorkspaceId={activeWorkspaceId}
           onSelectTab={setActiveTabId}
           onNewTab={() => handleNewTab()}
           onCloseTab={handleCloseTab}
           onTabContextMenu={(e, tabId) => setContextMenu({ tabId, x: e.clientX, y: e.clientY })}
+          onSwitchWorkspace={handleSwitchWorkspace}
+          onAddWorkspace={handleAddWorkspace}
+          onUpdateWorkspace={handleUpdateWorkspace}
+          onDeleteWorkspace={handleDeleteWorkspace}
         />
         <NavBar
           tab={activeTab}
@@ -357,6 +507,7 @@ export default function App() {
           addrFocusTick={addrFocusTick}
           adBlockEnabled={adBlockEnabled}
           adBlockCount={adBlockCount}
+          sysStats={sysStats}
           onNavigate={(url) => navigateTo(activeTabId, url)}
           onBack={() => webviewRefs.current[activeTabId]?.goBack()}
           onForward={() => webviewRefs.current[activeTabId]?.goForward()}
@@ -368,6 +519,8 @@ export default function App() {
           onTogglePanel={(p) => setShowPanel(prev => prev === p ? null : p)}
           onFind={() => setFindActive(true)}
           onToggleAdBlock={handleToggleAdBlock}
+          onPiP={handlePiP}
+          onScreenshot={handleScreenshot}
         />
 
         <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
@@ -398,7 +551,9 @@ export default function App() {
                 onNewTab={handleNewTab}
                 onNavigate={navigateTo}
                 onOpenSettings={() => setShowSettings(true)}
+                onWebContentsReady={handleWebContentsReady}
                 webviewRefs={webviewRefs}
+                newTabBackground={settings.newTabBackground}
               />
             ))}
 
@@ -438,7 +593,7 @@ export default function App() {
           x={contextMenu.x}
           y={contextMenu.y}
           tab={tabs.find(t => t.id === contextMenu.tabId)}
-          tabs={tabs}
+          tabs={workspaceTabs}
           recentlyClosed={recentlyClosed}
           onClose={() => setContextMenu(null)}
           onNewTab={() => handleNewTab()}

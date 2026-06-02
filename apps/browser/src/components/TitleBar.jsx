@@ -1,8 +1,13 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 
 const isMac = window.browserAPI?.platform === 'darwin'
 
-export default function TitleBar({ tabs, activeTabId, onSelectTab, onNewTab, onCloseTab, onTabContextMenu }) {
+const WS_COLORS = ['#3b82f6','#8b5cf6','#ec4899','#ef4444','#f59e0b','#10b981','#06b6d4','#f97316']
+
+export default function TitleBar({
+  tabs, allTabs, activeTabId, onSelectTab, onNewTab, onCloseTab, onTabContextMenu,
+  workspaces, activeWorkspaceId, onSwitchWorkspace, onAddWorkspace, onUpdateWorkspace, onDeleteWorkspace,
+}) {
   const [maximized, setMaximized] = useState(false)
 
   useEffect(() => {
@@ -22,17 +27,13 @@ export default function TitleBar({ tabs, activeTabId, onSelectTab, onNewTab, onC
       zIndex: 10,
     }}>
       <style>{`
-        @keyframes tabspin {
-          to { transform: rotate(360deg) }
-        }
+        @keyframes tabspin { to { transform: rotate(360deg) } }
         .tab-close-btn {
           opacity: 0;
           transition: opacity 0.12s, background 0.1s, color 0.1s;
         }
         .tab-row:hover .tab-close-btn,
-        .tab-row.tab-active .tab-close-btn {
-          opacity: 1;
-        }
+        .tab-row.tab-active .tab-close-btn { opacity: 1; }
         .tab-close-btn:hover {
           background: rgba(255,255,255,0.18) !important;
           color: rgba(255,255,255,0.95) !important;
@@ -53,28 +54,43 @@ export default function TitleBar({ tabs, activeTabId, onSelectTab, onNewTab, onC
       {/* Tab strip */}
       <div style={{
         display: 'flex',
-        alignItems: 'flex-end',
+        alignItems: 'center',
         flex: 1,
         overflow: 'hidden',
         WebkitAppRegion: 'no-drag',
         paddingLeft: isMac ? 82 : 8,
         paddingRight: isMac ? 8 : 0,
         height: '100%',
-        gap: 2,
+        gap: 0,
       }}>
-        {tabs.map(tab => (
-          <Tab
-            key={tab.id}
-            tab={tab}
-            active={tab.id === activeTabId}
-            onSelect={() => onSelectTab(tab.id)}
-            onClose={(e) => { e.stopPropagation(); onCloseTab(tab.id) }}
-            onContextMenu={(e) => { e.preventDefault(); onTabContextMenu?.(e, tab.id) }}
-          />
-        ))}
+        {/* Workspace pills */}
+        <WorkspacePills
+          workspaces={workspaces}
+          activeWorkspaceId={activeWorkspaceId}
+          allTabs={allTabs || tabs}
+          onSwitch={onSwitchWorkspace}
+          onAdd={onAddWorkspace}
+          onUpdate={onUpdateWorkspace}
+          onDelete={onDeleteWorkspace}
+        />
 
-        {/* New tab button */}
-        <NewTabBtn onClick={onNewTab} />
+        {/* Divider */}
+        <div style={{ width: 1, height: 18, background: 'var(--border-mid)', flexShrink: 0, margin: '0 6px 0 4px', alignSelf: 'center' }} />
+
+        {/* Tabs (aligned to bottom) */}
+        <div style={{ display: 'flex', alignItems: 'flex-end', flex: 1, overflow: 'hidden', height: '100%', gap: 2 }}>
+          {tabs.map(tab => (
+            <Tab
+              key={tab.id}
+              tab={tab}
+              active={tab.id === activeTabId}
+              onSelect={() => onSelectTab(tab.id)}
+              onClose={(e) => { e.stopPropagation(); onCloseTab(tab.id) }}
+              onContextMenu={(e) => { e.preventDefault(); onTabContextMenu?.(e, tab.id) }}
+            />
+          ))}
+          <NewTabBtn onClick={onNewTab} />
+        </div>
       </div>
 
       {/* Windows controls */}
@@ -90,6 +106,175 @@ export default function TitleBar({ tabs, activeTabId, onSelectTab, onNewTab, onC
         </div>
       )}
     </div>
+  )
+}
+
+function WorkspacePills({ workspaces, activeWorkspaceId, allTabs, onSwitch, onAdd, onUpdate, onDelete }) {
+  const [adding, setAdding] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [newColor, setNewColor] = useState(WS_COLORS[1])
+  const [renamingId, setRenamingId] = useState(null)
+  const [renameVal, setRenameVal] = useState('')
+  const [contextWs, setContextWs] = useState(null) // { id, x, y }
+  const inputRef = useRef(null)
+  const renameRef = useRef(null)
+  const ctxRef = useRef(null)
+
+  useEffect(() => { if (adding) inputRef.current?.focus() }, [adding])
+  useEffect(() => { if (renamingId) renameRef.current?.focus() }, [renamingId])
+
+  useEffect(() => {
+    if (!contextWs) return
+    const h = (e) => { if (!ctxRef.current?.contains(e.target)) setContextWs(null) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [contextWs])
+
+  const tabCount = (wsId) => allTabs.filter(t => t.workspaceId === wsId).length
+
+  const confirmAdd = () => {
+    if (newName.trim()) onAdd(newName.trim(), newColor)
+    setAdding(false)
+    setNewName('')
+    setNewColor(WS_COLORS[(workspaces.length) % WS_COLORS.length])
+  }
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
+      {workspaces.map((ws) => {
+        const active = ws.id === activeWorkspaceId
+        const count = tabCount(ws.id)
+        return (
+          <div key={ws.id} style={{ position: 'relative' }}>
+            {renamingId === ws.id ? (
+              <input
+                ref={renameRef}
+                value={renameVal}
+                onChange={e => setRenameVal(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') { onUpdate(ws.id, { name: renameVal.trim() || ws.name }); setRenamingId(null) }
+                  if (e.key === 'Escape') setRenamingId(null)
+                }}
+                onBlur={() => { onUpdate(ws.id, { name: renameVal.trim() || ws.name }); setRenamingId(null) }}
+                style={{
+                  width: 64, height: 24, borderRadius: 6,
+                  background: 'var(--surface2)', border: `1px solid ${ws.color}`,
+                  color: 'var(--text)', fontSize: 11, padding: '0 6px',
+                  outline: 'none', userSelect: 'text',
+                }}
+              />
+            ) : (
+              <button
+                onClick={() => onSwitch(ws.id)}
+                onDoubleClick={() => { setRenamingId(ws.id); setRenameVal(ws.name) }}
+                onContextMenu={(e) => { e.preventDefault(); setContextWs({ id: ws.id, x: e.clientX, y: e.clientY }) }}
+                title={`${ws.name} (${count} tab${count !== 1 ? 's' : ''})\nDouble-click to rename`}
+                style={{
+                  height: 26, minWidth: 26,
+                  borderRadius: 7,
+                  border: active ? `2px solid ${ws.color}` : `1px solid ${ws.color}44`,
+                  background: active ? ws.color : `${ws.color}22`,
+                  color: active ? '#fff' : ws.color,
+                  fontSize: 10, fontWeight: 700,
+                  cursor: 'pointer', padding: '0 7px',
+                  display: 'flex', alignItems: 'center', gap: 4,
+                  transition: 'all 0.15s',
+                  flexShrink: 0,
+                  userSelect: 'none',
+                }}
+              >
+                <span>{ws.name.slice(0, 8)}</span>
+                {count > 0 && (
+                  <span style={{
+                    fontSize: 9, background: active ? 'rgba(0,0,0,0.25)' : `${ws.color}44`,
+                    borderRadius: 4, padding: '0 3px', lineHeight: '14px',
+                  }}>{count}</span>
+                )}
+              </button>
+            )}
+          </div>
+        )
+      })}
+
+      {/* Add workspace */}
+      {adding ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+          <input
+            ref={inputRef}
+            value={newName}
+            onChange={e => setNewName(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') confirmAdd()
+              if (e.key === 'Escape') { setAdding(false); setNewName('') }
+            }}
+            placeholder="Name…"
+            style={{
+              width: 72, height: 24, borderRadius: 6,
+              background: 'var(--surface2)', border: '1px solid var(--border-mid)',
+              color: 'var(--text)', fontSize: 11, padding: '0 6px',
+              outline: 'none', userSelect: 'text',
+            }}
+          />
+          <div style={{ display: 'flex', gap: 2 }}>
+            {WS_COLORS.map(c => (
+              <button key={c} onClick={() => setNewColor(c)} style={{
+                width: 12, height: 12, borderRadius: '50%', border: `2px solid ${newColor === c ? '#fff' : 'transparent'}`,
+                background: c, cursor: 'pointer', padding: 0, flexShrink: 0,
+              }} />
+            ))}
+          </div>
+          <button onClick={confirmAdd} style={{
+            height: 22, padding: '0 8px', borderRadius: 5, border: 'none',
+            background: newColor, color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer',
+          }}>Add</button>
+        </div>
+      ) : (
+        <button
+          onClick={() => { setAdding(true); setNewColor(WS_COLORS[workspaces.length % WS_COLORS.length]) }}
+          title="New workspace"
+          style={{
+            width: 22, height: 22, borderRadius: 6, border: 'none',
+            background: 'rgba(255,255,255,0.07)', color: 'var(--muted)',
+            cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'background 0.1s, color 0.1s', flexShrink: 0,
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; e.currentTarget.style.color = 'var(--text)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; e.currentTarget.style.color = 'var(--muted)' }}
+        >+</button>
+      )}
+
+      {/* Workspace context menu */}
+      {contextWs && (
+        <div ref={ctxRef} style={{
+          position: 'fixed', top: contextWs.y, left: contextWs.x, zIndex: 9999,
+          background: 'var(--surface2)', border: '1px solid var(--border-mid)',
+          borderRadius: 8, padding: '4px', minWidth: 140,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
+        }}>
+          <CtxItem label="Rename" onClick={() => {
+            const ws = workspaces.find(w => w.id === contextWs.id)
+            setRenamingId(contextWs.id); setRenameVal(ws?.name || ''); setContextWs(null)
+          }} />
+          {workspaces.length > 1 && (
+            <CtxItem label="Delete workspace" danger onClick={() => { onDelete(contextWs.id); setContextWs(null) }} />
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function CtxItem({ label, onClick, danger }) {
+  return (
+    <button onClick={onClick} style={{
+      display: 'block', width: '100%', padding: '6px 10px',
+      background: 'none', border: 'none', textAlign: 'left',
+      fontSize: 12, color: danger ? '#ef4444' : 'var(--text)',
+      cursor: 'pointer', borderRadius: 5, fontFamily: 'inherit',
+    }}
+    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)' }}
+    onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
+    >{label}</button>
   )
 }
 
