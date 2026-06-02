@@ -82,6 +82,9 @@ export default function App() {
   const [recentlyClosed, setRecentlyClosed] = useState([])
   const [settings, setSettings] = useState({ searchEngine: 'google' })
   const [showSettings, setShowSettings] = useState(false)
+  const [adBlockEnabled, setAdBlockEnabled] = useState(true)
+  const [adBlockCount, setAdBlockCount] = useState(0)
+  const [adBlockDomains, setAdBlockDomains] = useState(0)
   const webviewRefs = useRef({})
   const settingsRef = useRef(settings)
 
@@ -91,11 +94,15 @@ export default function App() {
     window.browserAPI?.getBookmarks().then(setBookmarks)
     window.browserAPI?.getHistory().then(setHistory)
     window.browserAPI?.getSettings().then(s => { if (s && Object.keys(s).length) setSettings(s) })
+    window.browserAPI?.getAdBlockStats().then(s => {
+      if (s) { setAdBlockEnabled(s.enabled); setAdBlockCount(s.blocked); setAdBlockDomains(s.domains) }
+    })
     const u1 = window.browserAPI?.onDownloadStart(d => setDownloads(prev => [...prev, d]))
     const u2 = window.browserAPI?.onDownloadDone(d => setDownloads(prev =>
       prev.map(dl => dl.savePath === d.savePath ? { ...dl, done: true, state: d.state } : dl)
     ))
-    return () => { u1?.(); u2?.() }
+    const u3 = window.browserAPI?.onAdBlockCount(n => setAdBlockCount(n))
+    return () => { u1?.(); u2?.(); u3?.() }
   }, [])
 
   const updateTab = useCallback((id, patch) => {
@@ -240,6 +247,11 @@ export default function App() {
     updateTab(activeTabId, { findCount: null })
   }, [activeTabId, updateTab])
 
+  const handleToggleAdBlock = useCallback(async (enabled) => {
+    const result = await window.browserAPI?.setAdBlockEnabled(enabled)
+    setAdBlockEnabled(result ?? enabled)
+  }, [])
+
   const handleSaveSettings = useCallback(async (s) => {
     setSettings(s)
     await window.browserAPI?.setSettings(s)
@@ -343,6 +355,8 @@ export default function App() {
           showPanel={showPanel}
           findActive={findActive}
           addrFocusTick={addrFocusTick}
+          adBlockEnabled={adBlockEnabled}
+          adBlockCount={adBlockCount}
           onNavigate={(url) => navigateTo(activeTabId, url)}
           onBack={() => webviewRefs.current[activeTabId]?.goBack()}
           onForward={() => webviewRefs.current[activeTabId]?.goForward()}
@@ -353,6 +367,7 @@ export default function App() {
           onBookmarkRemove={handleBookmarkRemove}
           onTogglePanel={(p) => setShowPanel(prev => prev === p ? null : p)}
           onFind={() => setFindActive(true)}
+          onToggleAdBlock={handleToggleAdBlock}
         />
 
         <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
@@ -403,6 +418,10 @@ export default function App() {
                 settings={settings}
                 onSave={handleSaveSettings}
                 onClose={() => setShowSettings(false)}
+                adBlockEnabled={adBlockEnabled}
+                adBlockCount={adBlockCount}
+                adBlockDomains={adBlockDomains}
+                onToggleAdBlock={handleToggleAdBlock}
                 onClearHistory={async () => {
                   await window.browserAPI?.clearHistory()
                   setHistory([])

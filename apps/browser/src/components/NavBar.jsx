@@ -2,9 +2,10 @@ import React, { useState, useRef, useEffect, useCallback } from 'react'
 
 export default function NavBar({
   tab, bookmarks, downloads, showPanel, findActive, addrFocusTick,
+  adBlockEnabled, adBlockCount,
   onNavigate, onBack, onForward, onReload, onHome,
   onBookmarkSave, onBookmarkUpdate, onBookmarkRemove,
-  onTogglePanel, onFind,
+  onTogglePanel, onFind, onToggleAdBlock,
 }) {
   const [inputVal, setInputVal] = useState('')
   const [focused, setFocused] = useState(false)
@@ -335,6 +336,13 @@ export default function NavBar({
           </svg>
         </NavBtn>
 
+        {/* Ad blocker */}
+        <AdBlockBtn
+          enabled={adBlockEnabled}
+          count={adBlockCount}
+          onToggle={onToggleAdBlock}
+        />
+
         {/* Downloads */}
         {downloads.length > 0 && (
           <DownloadsBtn downloads={downloads} />
@@ -476,6 +484,121 @@ function DownloadsBtn({ downloads }) {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+function AdBlockBtn({ enabled, count, onToggle }) {
+  const [show, setShow] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    const h = (e) => { if (!ref.current?.contains(e.target)) setShow(false) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [])
+
+  const fmtCount = (n) => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n)
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <NavBtn
+        onClick={() => setShow(v => !v)}
+        title={enabled ? `Ad blocker on · ${count.toLocaleString()} blocked` : 'Ad blocker off'}
+        active={show}
+        size={30}
+      >
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+            stroke={enabled ? '#22c55e' : 'var(--muted)'}
+            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            {!enabled && <line x1="4" y1="4" x2="20" y2="20" stroke="#ef4444" strokeWidth="2" />}
+          </svg>
+          {enabled && count > 0 && (
+            <div style={{
+              position: 'absolute', top: -6, right: -8,
+              background: '#22c55e',
+              color: '#000',
+              fontSize: 8,
+              fontWeight: 700,
+              borderRadius: 4,
+              padding: '1px 3px',
+              lineHeight: 1.4,
+              minWidth: 14,
+              textAlign: 'center',
+              pointerEvents: 'none',
+            }}>
+              {fmtCount(count)}
+            </div>
+          )}
+        </div>
+      </NavBtn>
+
+      {show && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 10px)', right: 0, zIndex: 300,
+          width: 240,
+          background: 'var(--surface2)',
+          border: '1px solid var(--border-mid)',
+          borderRadius: 12,
+          boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
+          overflow: 'hidden',
+        }}>
+          {/* Header */}
+          <div style={{ padding: '14px 16px 10px', borderBottom: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke={enabled ? '#22c55e' : 'var(--muted)'}
+                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Ad Blocker</span>
+              {/* Toggle switch */}
+              <div
+                onClick={() => onToggle?.(!enabled)}
+                style={{
+                  marginLeft: 'auto',
+                  width: 34, height: 18,
+                  borderRadius: 9,
+                  background: enabled ? '#22c55e' : 'rgba(255,255,255,0.15)',
+                  cursor: 'pointer',
+                  position: 'relative',
+                  transition: 'background 0.2s',
+                  flexShrink: 0,
+                }}
+              >
+                <div style={{
+                  position: 'absolute',
+                  top: 2, left: enabled ? 18 : 2,
+                  width: 14, height: 14,
+                  borderRadius: '50%',
+                  background: '#fff',
+                  transition: 'left 0.2s',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+                }} />
+              </div>
+            </div>
+          </div>
+          {/* Stats */}
+          <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <StatRow
+              label="Blocked this session"
+              value={count.toLocaleString()}
+              color={enabled ? '#22c55e' : 'var(--muted)'}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function StatRow({ label, value, color }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <span style={{ fontSize: 12, color: 'var(--muted)' }}>{label}</span>
+      <span style={{ fontSize: 13, fontWeight: 700, color }}>{value}</span>
     </div>
   )
 }

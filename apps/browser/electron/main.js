@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, shell, session } from 'electron'
 import { join } from 'path'
 import path from 'path'
 import fs from 'fs'
+import * as adblock from './adblock.js'
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
 let mainWin = null
@@ -46,7 +47,41 @@ function createWindow() {
   }
 }
 
+// Throttled IPC broadcast for blocked count
+let countTimer = null
+function broadcastCount() {
+  if (countTimer) return
+  countTimer = setTimeout(() => {
+    mainWin?.webContents.send('browser:adBlockCount', adblock.getBlockedCount())
+    countTimer = null
+  }, 400)
+}
+
 app.whenReady().then(() => {
+  // Load adblock list (uses cache, fetches update in background)
+  adblock.loadBlocklist(app.getPath('userData'))
+  const savedSettings = loadData().settings || {}
+  if (savedSettings.adBlockEnabled === false) adblock.setEnabled(false)
+
+  // Network-level ad blocking
+  session.defaultSession.webRequest.onBeforeRequest({ urls: ['<all_urls>'] }, (details, callback) => {
+    if (adblock.shouldBlock(details.url)) {
+      broadcastCount()
+      callback({ cancel: true })
+    } else {
+      callback({})
+    }
+  })
+
+  // Cosmetic CSS injection into every webview page
+  app.on('web-contents-created', (_, contents) => {
+    contents.on('did-finish-load', () => {
+      if (adblock.isEnabled()) {
+        contents.insertCSS(adblock.AD_CSS).catch(() => {})
+      }
+    })
+  })
+
   session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
     const safe = ['notifications', 'clipboard-read', 'clipboard-sanitized-write']
     callback(safe.includes(permission))
@@ -141,3 +176,22 @@ ipcMain.handle('browser:setSettings', (_, settings) => {
 ipcMain.on('window:minimize', () => mainWin?.minimize())
 ipcMain.on('window:maximize', () => mainWin?.isMaximized() ? mainWin.unmaximize() : mainWin.maximize())
 ipcMain.on('window:close', () => mainWin?.close())
+
+ipcMain.handle('browser:getAdBlockStats', () => ({
+  enabled: adblock.isEnabled(),
+  blocked: adblock.getBlockedCount(),
+  domains: adblock.getDomainCount(),
+}))
+
+ipcMain.handle('browser:setAdBlockEnabled', (_, enabled) => {
+  adblock.setEnabled(enabled)
+  const d = loadData()
+  d.settings = { ...(d.settings || {}), adBlockEnabled: enabled }
+  saveData(d)
+  return adblock.isEnabled()
+})
+
+ipcMain.handle('browser:resetAdBlockCount', () => {
+  adblock.resetCount()
+  return 0
+})

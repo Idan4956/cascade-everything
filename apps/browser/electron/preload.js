@@ -15,6 +15,14 @@ contextBridge.exposeInMainWorld('browserAPI', {
   getSettings: () => ipcRenderer.invoke('browser:getSettings'),
   setSettings: (s) => ipcRenderer.invoke('browser:setSettings', s),
 
+  getAdBlockStats: () => ipcRenderer.invoke('browser:getAdBlockStats'),
+  setAdBlockEnabled: (v) => ipcRenderer.invoke('browser:setAdBlockEnabled', v),
+  resetAdBlockCount: () => ipcRenderer.invoke('browser:resetAdBlockCount'),
+  onAdBlockCount: (cb) => {
+    ipcRenderer.on('browser:adBlockCount', (_, n) => cb(n))
+    return () => ipcRenderer.removeAllListeners('browser:adBlockCount')
+  },
+
   onDownloadStart: (cb) => {
     ipcRenderer.on('browser:downloadStart', (_, d) => cb(d))
     return () => ipcRenderer.removeAllListeners('browser:downloadStart')

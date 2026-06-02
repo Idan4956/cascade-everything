@@ -7,7 +7,11 @@ const SEARCH_ENGINES = [
   { id: 'brave', label: 'Brave Search' },
 ]
 
-export default function SettingsPage({ settings, onSave, onClose, onClearHistory, onClearBookmarks }) {
+export default function SettingsPage({
+  settings, onSave, onClose,
+  adBlockEnabled, adBlockCount, adBlockDomains,
+  onToggleAdBlock, onClearHistory, onClearBookmarks,
+}) {
   const [local, setLocal] = useState(settings || { searchEngine: 'google' })
   const [historyDone, setHistoryDone] = useState(false)
   const [bmDone, setBmDone] = useState(false)
@@ -74,6 +78,26 @@ export default function SettingsPage({ settings, onSave, onClose, onClearHistory
                   </button>
                 ))}
               </div>
+            </SettingRow>
+          </SettingSection>
+
+          {/* Ad Blocker */}
+          <SettingSection title="Ad Blocker">
+            <SettingRow label="Block ads & trackers" desc={
+              adBlockDomains > 0
+                ? `Blocking against ${adBlockDomains.toLocaleString()} known domains`
+                : 'Loading domain list…'
+            }>
+              <Toggle enabled={adBlockEnabled} onToggle={onToggleAdBlock} />
+            </SettingRow>
+            <SettingRow label="Blocked this session" last>
+              <span style={{
+                fontSize: 22, fontWeight: 700,
+                color: adBlockEnabled ? '#22c55e' : 'var(--muted)',
+                fontVariantNumeric: 'tabular-nums',
+              }}>
+                {adBlockCount.toLocaleString()}
+              </span>
             </SettingRow>
           </SettingSection>
 
@@ -186,6 +210,33 @@ function DangerBtn({ label, doneLabel, done, onClick }) {
     >
       {done ? doneLabel : label}
     </button>
+  )
+}
+
+function Toggle({ enabled, onToggle }) {
+  return (
+    <div
+      onClick={() => onToggle?.(!enabled)}
+      style={{
+        width: 40, height: 22,
+        borderRadius: 11,
+        background: enabled ? '#22c55e' : 'rgba(255,255,255,0.15)',
+        cursor: 'pointer',
+        position: 'relative',
+        transition: 'background 0.2s',
+        flexShrink: 0,
+      }}
+    >
+      <div style={{
+        position: 'absolute',
+        top: 3, left: enabled ? 21 : 3,
+        width: 16, height: 16,
+        borderRadius: '50%',
+        background: '#fff',
+        transition: 'left 0.2s',
+        boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+      }} />
+    </div>
   )
 }
 
