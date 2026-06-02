@@ -8,9 +8,18 @@ import FindBar from './components/FindBar.jsx'
 const styles = `
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #0f0f13; --surface: #16161d; --surface2: #1c1c26;
-    --border: rgba(255,255,255,0.06); --text: #e8e8f0; --muted: #888899;
-    --accent: #3b82f6; --accent-soft: rgba(59,130,246,0.14);
+    --bg: #131313;
+    --chrome: #1d1d1d;
+    --surface: #252525;
+    --surface2: #2e2e2e;
+    --surface3: #393939;
+    --border: rgba(255,255,255,0.07);
+    --border-mid: rgba(255,255,255,0.12);
+    --text: rgba(255,255,255,0.9);
+    --muted: rgba(255,255,255,0.5);
+    --accent: #3b82f6;
+    --accent-soft: rgba(59,130,246,0.15);
+    --accent-hover: rgba(59,130,246,0.25);
   }
   html, body, #root { height: 100%; overflow: hidden; }
   body {
@@ -20,8 +29,10 @@ const styles = `
   }
   ::-webkit-scrollbar { width: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
   webview { display: flex; }
+  input { box-sizing: border-box; }
 `
 
 let tabIdCounter = 1
