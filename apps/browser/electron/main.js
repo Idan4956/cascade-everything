@@ -50,13 +50,14 @@ function createWindow() {
 // System stats
 let netBytesPerInterval = 0
 let forceDarkMode = false
+let proxyState = { enabled: false, protocol: 'socks5', host: '', port: '1080' }
 
 function startSysMonitor() {
   process.getCPUUsage() // prime the counter
   setInterval(() => {
     try {
       const metrics = app.getAppMetrics()
-      const totalCPU = Math.min(metrics.reduce((s, m) => s + (m.cpu?.percentCPUUsage || 0), 0), 1)
+      const totalCPU = Math.min(metrics.reduce((s, m) => s + (m.cpu?.percentCPUUsage || 0), 0) / 100, 1)
       const totalMemKB = metrics.reduce((s, m) => s + (m.memory?.workingSetSize || 0), 0)
       const sys = process.getSystemMemoryInfo()
       const netKBs = Math.round(netBytesPerInterval / 2 / 1024)
@@ -86,6 +87,15 @@ app.whenReady().then(() => {
   adblock.loadBlocklist(app.getPath('userData'))
   const savedSettings = loadData().settings || {}
   if (savedSettings.adBlockEnabled === false) adblock.setEnabled(false)
+  if (savedSettings.proxy) {
+    proxyState = { ...proxyState, ...savedSettings.proxy }
+    if (proxyState.enabled && proxyState.host) {
+      session.defaultSession.setProxy({
+        proxyRules: `${proxyState.protocol}://${proxyState.host}:${proxyState.port}`,
+        proxyBypassRules: '<local>',
+      }).catch(() => {})
+    }
+  }
 
   // Track network bytes for speed meter
   session.defaultSession.webRequest.onCompleted((details) => {
@@ -239,6 +249,27 @@ ipcMain.on('browser:setForceDarkMode', (_, enabled) => {
   const d = loadData()
   d.settings = { ...(d.settings || {}), forceDarkMode: enabled }
   saveData(d)
+})
+
+ipcMain.handle('browser:getProxy', () => proxyState)
+
+ipcMain.handle('browser:setProxy', async (_, config) => {
+  proxyState = { ...proxyState, ...config }
+  if (config.enabled && config.host) {
+    try {
+      await session.defaultSession.setProxy({
+        proxyRules: `${config.protocol}://${config.host}:${config.port}`,
+        proxyBypassRules: '<local>',
+      })
+    } catch {}
+  } else {
+    await session.defaultSession.setProxy({ mode: 'direct' }).catch(() => {})
+    proxyState.enabled = false
+  }
+  const d = loadData()
+  d.settings = { ...(d.settings || {}), proxy: proxyState }
+  saveData(d)
+  return proxyState
 })
 
 ipcMain.handle('browser:screenshot', async (_, wcId) => {

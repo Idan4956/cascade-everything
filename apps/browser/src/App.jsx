@@ -103,6 +103,7 @@ export default function App() {
   const [workspaces, setWorkspaces] = useState([{ id: 'ws_1', name: 'Main', color: '#3b82f6' }])
   const [activeWorkspaceId, setActiveWorkspaceId] = useState('ws_1')
   const [sysStats, setSysStats] = useState({ cpu: 0, ram: 0, memMB: 0, netKBs: 0 })
+  const [vpnConfig, setVpnConfig] = useState({ enabled: false, protocol: 'socks5', host: '', port: '1080' })
   const webviewRefs = useRef({})
   const wcIdsRef = useRef({})
   const settingsRef = useRef(settings)
@@ -125,6 +126,7 @@ export default function App() {
         }
       }
     })
+    window.browserAPI?.getProxy().then(p => { if (p) setVpnConfig(p) })
     window.browserAPI?.getAdBlockStats().then(s => {
       if (s) { setAdBlockEnabled(s.enabled); setAdBlockCount(s.blocked); setAdBlockDomains(s.domains) }
     })
@@ -382,6 +384,11 @@ export default function App() {
     updateTab(activeTabId, { findCount: null })
   }, [activeTabId, updateTab])
 
+  const handleSetProxy = useCallback(async (config) => {
+    const result = await window.browserAPI?.setProxy(config)
+    if (result) setVpnConfig(result)
+  }, [])
+
   const handleToggleAdBlock = useCallback(async (enabled) => {
     const result = await window.browserAPI?.setAdBlockEnabled(enabled)
     setAdBlockEnabled(result ?? enabled)
@@ -520,6 +527,8 @@ export default function App() {
           adBlockEnabled={adBlockEnabled}
           adBlockCount={adBlockCount}
           sysStats={sysStats}
+          vpnConfig={vpnConfig}
+          onSetProxy={handleSetProxy}
           onNavigate={(url) => navigateTo(activeTabId, url)}
           onBack={() => webviewRefs.current[activeTabId]?.goBack()}
           onForward={() => webviewRefs.current[activeTabId]?.goForward()}

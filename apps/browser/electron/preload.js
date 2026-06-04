@@ -25,6 +25,8 @@ contextBridge.exposeInMainWorld('browserAPI', {
 
   setForceDarkMode: (v) => ipcRenderer.send('browser:setForceDarkMode', v),
   screenshot: (wcId) => ipcRenderer.invoke('browser:screenshot', wcId),
+  getProxy: () => ipcRenderer.invoke('browser:getProxy'),
+  setProxy: (config) => ipcRenderer.invoke('browser:setProxy', config),
 
   onSysStats: (cb) => {
     ipcRenderer.on('browser:sysStats', (_, s) => cb(s))
