@@ -453,6 +453,18 @@ export default function App() {
     setSplitTabId(prev => prev === tabId ? null : tabId)
   }, [])
 
+  const handleReorderTabs = useCallback((fromId, toId) => {
+    setTabs(prev => {
+      const fromIdx = prev.findIndex(t => t.id === fromId)
+      const toIdx = prev.findIndex(t => t.id === toId)
+      if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return prev
+      const next = [...prev]
+      const [removed] = next.splice(fromIdx, 1)
+      next.splice(toIdx, 0, removed)
+      return next
+    })
+  }, [])
+
   const handleZoomIn = useCallback(() => {
     const cur = tabZoom[activeTabId] || 1
     const next = Math.min(parseFloat((cur + 0.1).toFixed(1)), 3)
@@ -648,6 +660,7 @@ export default function App() {
           onAddWorkspace={handleAddWorkspace}
           onUpdateWorkspace={handleUpdateWorkspace}
           onDeleteWorkspace={handleDeleteWorkspace}
+          onReorderTabs={handleReorderTabs}
         />}
         {!focusMode && <NavBar
           tab={activeTab}

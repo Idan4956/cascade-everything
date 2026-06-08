@@ -7,8 +7,11 @@ const WS_COLORS = ['#3b82f6','#8b5cf6','#ec4899','#ef4444','#f59e0b','#10b981','
 export default function TitleBar({
   tabs, allTabs, activeTabId, onSelectTab, onNewTab, onNewTabAfter, onCloseTab, onTabContextMenu,
   workspaces, activeWorkspaceId, onSwitchWorkspace, onAddWorkspace, onUpdateWorkspace, onDeleteWorkspace,
+  onReorderTabs,
 }) {
   const [maximized, setMaximized] = useState(false)
+  const [dragId, setDragId] = useState(null)
+  const [dragOverId, setDragOverId] = useState(null)
 
   useEffect(() => {
     const unsub = window.browserAPI?.onMaximized(setMaximized)
@@ -84,9 +87,14 @@ export default function TitleBar({
               <Tab
                 tab={tab}
                 active={tab.id === activeTabId}
+                dragOver={dragOverId === tab.id && dragId !== tab.id}
                 onSelect={() => onSelectTab(tab.id)}
                 onClose={(e) => { e.stopPropagation(); onCloseTab(tab.id) }}
                 onContextMenu={(e) => { e.preventDefault(); onTabContextMenu?.(e, tab.id) }}
+                onDragStart={() => setDragId(tab.id)}
+                onDragOver={(e) => { e.preventDefault(); setDragOverId(tab.id) }}
+                onDrop={() => { if (dragId && dragId !== tab.id) onReorderTabs?.(dragId, tab.id); setDragId(null); setDragOverId(null) }}
+                onDragEnd={() => { setDragId(null); setDragOverId(null) }}
               />
               <InsertSlot onInsert={() => onNewTabAfter?.(tab.id)} />
             </React.Fragment>
@@ -280,17 +288,22 @@ function CtxItem({ label, onClick, danger }) {
   )
 }
 
-function Tab({ tab, active, onSelect, onClose, onContextMenu }) {
+function Tab({ tab, active, dragOver, onSelect, onClose, onContextMenu, onDragStart, onDragOver, onDrop, onDragEnd }) {
   const [hov, setHov] = useState(false)
 
   if (tab.pinned) {
     return (
       <div
         className={`tab-row${active ? ' tab-active' : ''}`}
+        draggable
         onClick={onSelect}
         onContextMenu={onContextMenu}
         onMouseEnter={() => setHov(true)}
         onMouseLeave={() => setHov(false)}
+        onDragStart={onDragStart}
+        onDragOver={onDragOver}
+        onDrop={onDrop}
+        onDragEnd={onDragEnd}
         title={tab.title}
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -299,14 +312,14 @@ function Tab({ tab, active, onSelect, onClose, onContextMenu }) {
           padding: '0 6px',
           borderRadius: '8px 8px 0 0',
           background: active ? 'var(--surface)' : hov ? 'rgba(255,255,255,0.06)' : 'transparent',
-          cursor: 'pointer',
+          cursor: 'grab',
           borderTop: active ? '2px solid var(--accent)' : '2px solid transparent',
-          borderLeft: active ? '1px solid var(--border-mid)' : '1px solid transparent',
+          borderLeft: dragOver ? '2px solid var(--accent)' : active ? '1px solid var(--border-mid)' : '1px solid transparent',
           borderRight: active ? '1px solid var(--border-mid)' : '1px solid transparent',
           borderBottom: 'none',
           marginBottom: active ? -1 : 0,
           alignSelf: 'flex-end',
-          transition: 'background 0.1s',
+          transition: 'background 0.1s, border-color 0.1s',
           position: 'relative',
         }}
       >
@@ -328,10 +341,15 @@ function Tab({ tab, active, onSelect, onClose, onContextMenu }) {
   return (
     <div
       className={`tab-row${active ? ' tab-active' : ''}`}
+      draggable
       onClick={onSelect}
       onContextMenu={onContextMenu}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      onDragEnd={onDragEnd}
       title={tab.title}
       style={{
         display: 'flex',
@@ -348,17 +366,17 @@ function Tab({ tab, active, onSelect, onClose, onContextMenu }) {
           : hov
             ? 'rgba(255,255,255,0.06)'
             : 'transparent',
-        cursor: 'pointer',
+        cursor: 'grab',
         overflow: 'hidden',
         flexShrink: 0,
         position: 'relative',
         borderTop: active ? '2px solid var(--accent)' : '2px solid transparent',
-        borderLeft: active ? '1px solid var(--border-mid)' : '1px solid transparent',
+        borderLeft: dragOver ? '2px solid var(--accent)' : active ? '1px solid var(--border-mid)' : '1px solid transparent',
         borderRight: active ? '1px solid var(--border-mid)' : '1px solid transparent',
         borderBottom: 'none',
         marginBottom: active ? -1 : 0,
         alignSelf: 'flex-end',
-        transition: 'background 0.1s',
+        transition: 'background 0.1s, border-color 0.1s',
       }}
     >
       {/* Favicon or spinner */}
