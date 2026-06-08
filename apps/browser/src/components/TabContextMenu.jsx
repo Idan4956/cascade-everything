@@ -4,6 +4,7 @@ export default function TabContextMenu({
   x, y, tab, tabs, recentlyClosed, onClose,
   onNewTab, onDuplicate, onPin, onReloadTab,
   onCloseTab, onCloseOthers, onCloseToRight, onReopenClosed,
+  splitTabId, onSplitTab,
 }) {
   const menuRef = useRef(null)
 
@@ -33,6 +34,9 @@ export default function TabContextMenu({
     [
       { label: tab?.pinned ? 'Unpin tab' : 'Pin tab', action: () => { onPin(tab?.id); onClose() } },
       { label: 'Reload tab', action: () => { onReloadTab(tab?.id); onClose() } },
+    ],
+    [
+      { label: splitTabId === tab?.id ? 'Close split' : 'Open in split view', icon: 'split', action: () => { onSplitTab?.(tab?.id); onClose() } },
     ],
     [
       { label: 'Close tab', action: () => { onCloseTab(tab?.id); onClose() } },
@@ -73,13 +77,24 @@ export default function TabContextMenu({
   )
 }
 
+function SplitIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
+      <rect x="2" y="3" width="20" height="18" rx="2"/>
+      <line x1="12" y1="3" x2="12" y2="21"/>
+    </svg>
+  )
+}
+
 function MenuItem({ item }) {
   return (
     <button
       onClick={item.action}
       disabled={item.disabled}
       style={{
-        display: 'block',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
         width: '100%',
         padding: '7px 12px',
         background: 'none',
@@ -95,6 +110,7 @@ function MenuItem({ item }) {
       onMouseEnter={e => { if (!item.disabled) e.currentTarget.style.background = 'rgba(255,255,255,0.08)' }}
       onMouseLeave={e => { e.currentTarget.style.background = 'none' }}
     >
+      {item.icon === 'split' && <SplitIcon />}
       {item.label}
     </button>
   )

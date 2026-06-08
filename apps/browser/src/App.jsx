@@ -6,6 +6,7 @@ import SidePanel from './components/SidePanel.jsx'
 import FindBar from './components/FindBar.jsx'
 import TabContextMenu from './components/TabContextMenu.jsx'
 import SettingsPage from './components/SettingsPage.jsx'
+import CommandPalette from './components/CommandPalette.jsx'
 import { sounds, setSoundsEnabled } from './utils/sounds.js'
 
 const styles = `
@@ -97,6 +98,8 @@ export default function App() {
   const [recentlyClosed, setRecentlyClosed] = useState([])
   const [settings, setSettings] = useState({ searchEngine: 'google' })
   const [showSettings, setShowSettings] = useState(false)
+  const [showPalette, setShowPalette] = useState(false)
+  const [splitTabId, setSplitTabId] = useState(null)
   const [adBlockEnabled, setAdBlockEnabled] = useState(true)
   const [adBlockCount, setAdBlockCount] = useState(0)
   const [adBlockDomains, setAdBlockDomains] = useState(0)
@@ -405,6 +408,10 @@ export default function App() {
     }
   }, [])
 
+  const handleSplitTab = useCallback((tabId) => {
+    setSplitTabId(prev => prev === tabId ? null : tabId)
+  }, [])
+
   const handleClearBookmarks = useCallback(async () => {
     for (const bm of bookmarks) {
       await window.browserAPI?.removeBookmark(bm.url)
@@ -466,13 +473,15 @@ export default function App() {
           return prev
         })
       }
+      if (mod && e.key === 'k') { e.preventDefault(); setShowPalette(true) }
+      if (e.key === 'Escape' && showPalette) { setShowPalette(false) }
       if (e.key === 'Escape' && findActive) handleFindClose()
       if (e.key === 'Escape' && contextMenu) setContextMenu(null)
       if (e.key === 'Escape' && showSettings) setShowSettings(false)
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [activeTabId, findActive, findQuery, contextMenu, showSettings, handleNewTab, handleCloseTab, handleReload, handleFindClose])
+  }, [activeTabId, findActive, findQuery, contextMenu, showSettings, showPalette, handleNewTab, handleCloseTab, handleReload, handleFindClose])
 
   // Update history list after navigation
   useEffect(() => {
@@ -512,6 +521,8 @@ export default function App() {
           onNewTabAfter={handleNewTabAfter}
           onCloseTab={handleCloseTab}
           onTabContextMenu={(e, tabId) => setContextMenu({ tabId, x: e.clientX, y: e.clientY })}
+          splitTabId={splitTabId}
+          onSplitTab={handleSplitTab}
           onSwitchWorkspace={handleSwitchWorkspace}
           onAddWorkspace={handleAddWorkspace}
           onUpdateWorkspace={handleUpdateWorkspace}
@@ -562,49 +573,77 @@ export default function App() {
             />
           )}
 
-          <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-            {tabs.map(tab => (
-              <TabWebView
-                key={tab.id}
-                tab={tab}
-                active={tab.id === activeTabId}
-                onUpdate={updateTab}
-                onNewTab={handleNewTab}
-                onNavigate={navigateTo}
-                onOpenSettings={() => setShowSettings(true)}
-                onWebContentsReady={handleWebContentsReady}
-                webviewRefs={webviewRefs}
-                newTabBackground={settings.newTabBackground}
-              />
-            ))}
+          <div style={{ flex: 1, position: 'relative', overflow: 'hidden', display: 'flex' }}>
+            <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+              {tabs.map(tab => (
+                <TabWebView
+                  key={tab.id}
+                  tab={tab}
+                  active={tab.id === activeTabId}
+                  onUpdate={updateTab}
+                  onNewTab={handleNewTab}
+                  onNavigate={navigateTo}
+                  onOpenSettings={() => setShowSettings(true)}
+                  onWebContentsReady={handleWebContentsReady}
+                  webviewRefs={webviewRefs}
+                  newTabBackground={settings.newTabBackground}
+                />
+              ))}
 
-            {findActive && (
-              <FindBar
-                query={findQuery}
-                count={activeTab?.findCount}
-                onChange={handleFindChange}
-                onNext={() => handleFindNav(true)}
-                onPrev={() => handleFindNav(false)}
-                onClose={handleFindClose}
-              />
-            )}
+              {findActive && (
+                <FindBar
+                  query={findQuery}
+                  count={activeTab?.findCount}
+                  onChange={handleFindChange}
+                  onNext={() => handleFindNav(true)}
+                  onPrev={() => handleFindNav(false)}
+                  onClose={handleFindClose}
+                />
+              )}
 
-            {showSettings && (
-              <SettingsPage
-                settings={settings}
-                onSave={handleSaveSettings}
-                onClose={() => setShowSettings(false)}
-                adBlockEnabled={adBlockEnabled}
-                adBlockCount={adBlockCount}
-                adBlockDomains={adBlockDomains}
-                onToggleAdBlock={handleToggleAdBlock}
-                onClearHistory={async () => {
-                  await window.browserAPI?.clearHistory()
-                  setHistory([])
-                }}
-                onClearBookmarks={handleClearBookmarks}
-              />
-            )}
+              {showSettings && (
+                <SettingsPage
+                  settings={settings}
+                  onSave={handleSaveSettings}
+                  onClose={() => setShowSettings(false)}
+                  adBlockEnabled={adBlockEnabled}
+                  adBlockCount={adBlockCount}
+                  adBlockDomains={adBlockDomains}
+                  onToggleAdBlock={handleToggleAdBlock}
+                  onClearHistory={async () => {
+                    await window.browserAPI?.clearHistory()
+                    setHistory([])
+                  }}
+                  onClearBookmarks={handleClearBookmarks}
+                />
+              )}
+            </div>
+
+            {splitTabId && (() => {
+              const splitTab = tabs.find(t => t.id === splitTabId)
+              return splitTab ? (
+                <>
+                  <div style={{ width: 3, background: 'var(--border-mid)', flexShrink: 0, cursor: 'col-resize', position: 'relative', zIndex: 5 }}
+                    title="Click to close split"
+                    onClick={() => setSplitTabId(null)}
+                  />
+                  <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+                    <TabWebView
+                      key={`split-${splitTab.id}`}
+                      tab={{ ...splitTab, id: `split-${splitTab.id}` }}
+                      active={true}
+                      onUpdate={(id, patch) => updateTab(splitTab.id, patch)}
+                      onNewTab={handleNewTab}
+                      onNavigate={(_, url) => navigateTo(splitTab.id, url)}
+                      onOpenSettings={() => setShowSettings(true)}
+                      onWebContentsReady={(id, wcId) => handleWebContentsReady(splitTab.id, wcId)}
+                      webviewRefs={webviewRefs}
+                      newTabBackground={settings.newTabBackground}
+                    />
+                  </div>
+                </>
+              ) : null
+            })()}
           </div>
         </div>
       </div>
@@ -625,6 +664,22 @@ export default function App() {
           onCloseOthers={handleCloseOtherTabs}
           onCloseToRight={handleCloseTabsToRight}
           onReopenClosed={handleReopenClosed}
+          splitTabId={splitTabId}
+          onSplitTab={handleSplitTab}
+        />
+      )}
+
+      {showPalette && (
+        <CommandPalette
+          tabs={workspaceTabs}
+          history={history}
+          bookmarks={bookmarks}
+          onSelectTab={(id) => { setActiveTabId(id); setShowPalette(false) }}
+          onNavigate={(url) => { navigateTo(activeTabId, url); setShowPalette(false) }}
+          onNewTab={() => { handleNewTab(); setShowPalette(false) }}
+          onOpenSettings={() => { setShowSettings(true); setShowPalette(false) }}
+          onTogglePanel={(p) => { setShowPanel(prev => prev === p ? null : p); setShowPalette(false) }}
+          onClose={() => setShowPalette(false)}
         />
       )}
     </>
