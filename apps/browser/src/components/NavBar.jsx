@@ -6,6 +6,8 @@ export default function NavBar({
   onNavigate, onBack, onForward, onReload, onHome,
   onBookmarkSave, onBookmarkUpdate, onBookmarkRemove,
   onTogglePanel, onFind, onToggleAdBlock, onPiP, onScreenshot,
+  tabZoom, onZoomIn, onZoomOut, onZoomReset,
+  readerMode, onToggleReaderMode,
 }) {
   const [inputVal, setInputVal] = useState('')
   const [focused, setFocused] = useState(false)
@@ -202,6 +204,25 @@ export default function NavBar({
       {/* Right-side actions */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
 
+        {/* Zoom controls (shown when zoomed) */}
+        {Math.round((tabZoom || 1) * 100) !== 100 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 1, background: 'rgba(255,255,255,0.06)', borderRadius: 8, padding: '2px 2px', flexShrink: 0 }}>
+            <NavBtn onClick={onZoomOut} title="Zoom out  Ctrl+-" size={26}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </NavBtn>
+            <button
+              onClick={onZoomReset}
+              title="Reset zoom  Ctrl+0"
+              style={{ fontSize: 11, color: 'var(--text)', background: 'none', border: 'none', cursor: 'pointer', padding: '0 5px', fontFamily: 'inherit', fontWeight: 700, letterSpacing: '-0.02em', userSelect: 'none', minWidth: 36 }}
+            >
+              {Math.round((tabZoom || 1) * 100)}%
+            </button>
+            <NavBtn onClick={onZoomIn} title="Zoom in  Ctrl+=" size={26}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </NavBtn>
+          </div>
+        )}
+
         {/* Bookmark */}
         <div style={{ position: 'relative' }} ref={popoverRef}>
           <NavBtn onClick={openBmPopover} title={isBookmarked ? 'Edit bookmark' : 'Add bookmark  Ctrl+D'} active={isBookmarked || bmPopover} size={30}>
@@ -263,6 +284,13 @@ export default function NavBar({
         <NavBtn onClick={onFind} title="Find  Ctrl+F" active={findActive} size={30}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
         </NavBtn>
+        <NavBtn onClick={() => onTogglePanel('sessions')} title="Sessions — save & restore tab groups" active={showPanel === 'sessions'} size={30}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+            <line x1="12" y1="22.08" x2="12" y2="12"/>
+          </svg>
+        </NavBtn>
 
         {/* Divider before privacy tools */}
         <div style={{ width: 1, height: 18, background: 'rgba(255,255,255,0.08)', margin: '0 3px' }} />
@@ -276,7 +304,13 @@ export default function NavBar({
         {/* Divider before utility tools */}
         <div style={{ width: 1, height: 18, background: 'rgba(255,255,255,0.08)', margin: '0 3px' }} />
 
-        {/* Utility: PiP + Screenshot */}
+        {/* Utility: Reader Mode + PiP + Screenshot */}
+        <NavBtn onClick={onToggleReaderMode} active={readerMode} title="Reader mode — clean article view" size={30}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+          </svg>
+        </NavBtn>
         <NavBtn onClick={onPiP} title="Picture-in-picture" size={30}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" /><rect x="12" y="11" width="9" height="7" rx="1" fill="currentColor" stroke="none" opacity="0.5" /><rect x="12" y="11" width="9" height="7" rx="1" /></svg>
         </NavBtn>

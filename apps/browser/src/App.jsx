@@ -107,6 +107,14 @@ export default function App() {
   const [activeWorkspaceId, setActiveWorkspaceId] = useState('ws_1')
   const [sysStats, setSysStats] = useState({ cpu: 0, ram: 0, memMB: 0, netKBs: 0 })
   const [vpnConfig, setVpnConfig] = useState({ enabled: false, protocol: 'socks5', host: '', port: '1080' })
+  const [tabZoom, setTabZoom] = useState({})
+  const [readerMode, setReaderMode] = useState({})
+  const [sessions, setSessions] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('cascade-sessions') || '[]') }
+    catch { return [] }
+  })
+  const [focusMode, setFocusMode] = useState(false)
+  const [focusBanner, setFocusBanner] = useState(false)
   const webviewRefs = useRef({})
   const wcIdsRef = useRef({})
   const settingsRef = useRef(settings)
@@ -138,6 +146,14 @@ export default function App() {
       }))
     }, 60 * 1000)
     return () => clearInterval(sleepTimerRef.current)
+  }, [activeTabId])
+
+  useEffect(() => {
+    const factor = tabZoom[activeTabId] || 1
+    if (factor !== 1) {
+      const t = setTimeout(() => webviewRefs.current[activeTabId]?.setZoomFactor(factor), 150)
+      return () => clearTimeout(t)
+    }
   }, [activeTabId])
 
   useEffect(() => {
@@ -437,6 +453,82 @@ export default function App() {
     setSplitTabId(prev => prev === tabId ? null : tabId)
   }, [])
 
+  const handleZoomIn = useCallback(() => {
+    const cur = tabZoom[activeTabId] || 1
+    const next = Math.min(parseFloat((cur + 0.1).toFixed(1)), 3)
+    setTabZoom(prev => ({ ...prev, [activeTabId]: next }))
+    webviewRefs.current[activeTabId]?.setZoomFactor(next)
+  }, [activeTabId, tabZoom])
+
+  const handleZoomOut = useCallback(() => {
+    const cur = tabZoom[activeTabId] || 1
+    const next = Math.max(parseFloat((cur - 0.1).toFixed(1)), 0.3)
+    setTabZoom(prev => ({ ...prev, [activeTabId]: next }))
+    webviewRefs.current[activeTabId]?.setZoomFactor(next)
+  }, [activeTabId, tabZoom])
+
+  const handleZoomReset = useCallback(() => {
+    setTabZoom(prev => ({ ...prev, [activeTabId]: 1 }))
+    webviewRefs.current[activeTabId]?.setZoomFactor(1)
+  }, [activeTabId])
+
+  const handleToggleReaderMode = useCallback(() => {
+    const isOn = readerMode[activeTabId]
+    const wv = webviewRefs.current[activeTabId]
+    if (!wv) return
+    if (!isOn) {
+      setReaderMode(prev => ({ ...prev, [activeTabId]: true }))
+      wv.executeJavaScript(`
+        (function() {
+          if (document.__readerSaved) return;
+          document.__readerSaved = document.documentElement.innerHTML;
+          const selectors = ['article', 'main', '[role="main"]', '.post-content', '.entry-content', '.article-body', '.content', '.post', '.story'];
+          let node = null;
+          for (const s of selectors) {
+            const el = document.querySelector(s);
+            if (el && el.innerText.trim().length > 400) { node = el; break; }
+          }
+          if (!node) {
+            const divs = [...document.querySelectorAll('div,section,p')];
+            node = divs.sort((a,b) => b.innerText.length - a.innerText.length)[0] || document.body;
+          }
+          const content = node.innerHTML;
+          const title = document.title;
+          document.documentElement.innerHTML = '<html><head><style>*{box-sizing:border-box;margin:0;padding:0}body{background:#111;color:#ddd;font-family:Georgia,serif;font-size:19px;line-height:1.75;padding:60px 24px 80px}#__r{max-width:680px;margin:0 auto}h1,h2,h3{font-family:system-ui,sans-serif;line-height:1.3;margin:1.2em 0 0.5em;color:#fff}p{margin:0.8em 0}img{max-width:100%;border-radius:6px;margin:1em 0}a{color:#60a5fa}#__rtitle{font-size:28px;font-weight:700;color:#fff;margin-bottom:28px;line-height:1.3;font-family:system-ui,sans-serif}</style></head><body><div id="__r"><div id="__rtitle">'+title+'</div>'+content+'</div></body></html>';
+        })()
+      `).catch(() => {})
+    } else {
+      setReaderMode(prev => ({ ...prev, [activeTabId]: false }))
+      webviewRefs.current[activeTabId]?.reload()
+    }
+  }, [activeTabId, readerMode])
+
+  const handleSaveSession = useCallback((name) => {
+    const snap = {
+      id: `sess_${Date.now()}`,
+      name: name || `Session — ${new Date().toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`,
+      created: Date.now(),
+      tabs: workspaceTabs.filter(t => t.displayUrl).map(t => ({ url: t.displayUrl, title: t.title, favicon: t.favicon })),
+    }
+    setSessions(prev => {
+      const next = [snap, ...prev].slice(0, 25)
+      localStorage.setItem('cascade-sessions', JSON.stringify(next))
+      return next
+    })
+  }, [workspaceTabs])
+
+  const handleRestoreSession = useCallback((session) => {
+    session.tabs.forEach(t => handleNewTab(t.url))
+  }, [handleNewTab])
+
+  const handleDeleteSession = useCallback((id) => {
+    setSessions(prev => {
+      const next = prev.filter(s => s.id !== id)
+      localStorage.setItem('cascade-sessions', JSON.stringify(next))
+      return next
+    })
+  }, [])
+
   const handleClearBookmarks = useCallback(async () => {
     for (const bm of bookmarks) {
       await window.browserAPI?.removeBookmark(bm.url)
@@ -503,10 +595,14 @@ export default function App() {
       if (e.key === 'Escape' && findActive) handleFindClose()
       if (e.key === 'Escape' && contextMenu) setContextMenu(null)
       if (e.key === 'Escape' && showSettings) setShowSettings(false)
+      if (mod && (e.key === '=' || e.key === '+')) { e.preventDefault(); handleZoomIn() }
+      if (mod && e.key === '-') { e.preventDefault(); handleZoomOut() }
+      if (mod && e.key === '0') { e.preventDefault(); handleZoomReset() }
+      if (mod && e.shiftKey && e.key === 'F') { e.preventDefault(); setFocusMode(p => !p) }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [activeTabId, findActive, findQuery, contextMenu, showSettings, showPalette, handleNewTab, handleCloseTab, handleReload, handleFindClose])
+  }, [activeTabId, findActive, findQuery, contextMenu, showSettings, showPalette, focusMode, handleNewTab, handleCloseTab, handleReload, handleFindClose, handleZoomIn, handleZoomOut, handleZoomReset])
 
   // Update history list after navigation
   useEffect(() => {
@@ -535,7 +631,7 @@ export default function App() {
         }`}</style>
       )}
       <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-        <TitleBar
+        {!focusMode && <TitleBar
           tabs={workspaceTabs}
           allTabs={tabs}
           activeTabId={activeTabId}
@@ -552,8 +648,8 @@ export default function App() {
           onAddWorkspace={handleAddWorkspace}
           onUpdateWorkspace={handleUpdateWorkspace}
           onDeleteWorkspace={handleDeleteWorkspace}
-        />
-        <NavBar
+        />}
+        {!focusMode && <NavBar
           tab={activeTab}
           bookmarks={bookmarks}
           downloads={downloads}
@@ -578,7 +674,43 @@ export default function App() {
           onToggleAdBlock={handleToggleAdBlock}
           onPiP={handlePiP}
           onScreenshot={handleScreenshot}
-        />
+          tabZoom={tabZoom[activeTabId] || 1}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          onZoomReset={handleZoomReset}
+          readerMode={!!readerMode[activeTabId]}
+          onToggleReaderMode={handleToggleReaderMode}
+        />}
+
+        {focusMode && (
+          <div
+            style={{ position: 'fixed', top: 0, left: 0, right: 0, height: 6, zIndex: 9999, cursor: 'pointer' }}
+            onMouseEnter={() => setFocusBanner(true)}
+            onMouseLeave={() => setFocusBanner(false)}
+            onClick={() => setFocusMode(false)}
+          />
+        )}
+        {focusMode && focusBanner && (
+          <div
+            onClick={() => setFocusMode(false)}
+            onMouseEnter={() => setFocusBanner(true)}
+            onMouseLeave={() => setFocusBanner(false)}
+            style={{
+              position: 'fixed', top: 0, left: '50%', transform: 'translateX(-50%)',
+              background: 'var(--surface2)', border: '1px solid var(--border-mid)',
+              borderRadius: '0 0 10px 10px', padding: '7px 18px', zIndex: 9999,
+              fontSize: 12, color: 'var(--muted)', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 8,
+              boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+              userSelect: 'none',
+            }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+            </svg>
+            Exit Focus Mode  <kbd style={{ fontSize: 10, background: 'rgba(255,255,255,0.08)', border: '1px solid var(--border-mid)', borderRadius: 4, padding: '1px 5px' }}>Ctrl+Shift+F</kbd>
+          </div>
+        )}
 
         <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
           {showPanel && (
@@ -595,6 +727,10 @@ export default function App() {
                 setHistory([])
               }}
               onClose={() => setShowPanel(null)}
+              sessions={sessions}
+              onSaveSession={handleSaveSession}
+              onRestoreSession={handleRestoreSession}
+              onDeleteSession={handleDeleteSession}
             />
           )}
 
