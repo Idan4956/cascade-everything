@@ -390,7 +390,7 @@ function Tab({ tab, active, onSelect, onClose, onContextMenu }) {
       {/* Title */}
       <span style={{
         fontSize: 12,
-        color: active ? 'var(--text)' : 'var(--muted)',
+        color: active ? 'var(--text)' : tab.sleeping ? 'rgba(255,255,255,0.25)' : 'var(--muted)',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',
@@ -400,6 +400,18 @@ function Tab({ tab, active, onSelect, onClose, onContextMenu }) {
       }}>
         {tab.title || 'New Tab'}
       </span>
+
+      {/* Sleep indicator */}
+      {tab.sleeping && (
+        <div title="Tab sleeping — click to wake" style={{
+          flexShrink: 0, color: '#8b5cf6', opacity: 0.8,
+          display: 'flex', alignItems: 'center',
+        }}>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </div>
+      )}
 
       {/* Close button */}
       <button

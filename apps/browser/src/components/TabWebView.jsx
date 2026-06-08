@@ -98,6 +98,31 @@ export default function TabWebView({ tab, active, onUpdate, onNewTab, onNavigate
         <NewTabPage onNavigate={(url) => onNavigate(tab.id, url)} onOpenSettings={onOpenSettings} background={newTabBackground} />
       )}
 
+      {tab.sleeping && !tab.isNewTab && (
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'var(--bg)',
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          gap: 12, zIndex: 1,
+        }}>
+          <div style={{
+            width: 48, height: 48, borderRadius: 14,
+            background: 'rgba(139,92,246,0.15)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" strokeWidth="1.5" strokeLinecap="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+          </div>
+          {tab.favicon && <img src={tab.favicon} width={20} height={20} style={{ borderRadius: 4, opacity: 0.5 }} />}
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 14, color: 'var(--muted)', fontWeight: 500 }}>{tab.title || 'Tab sleeping'}</div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', marginTop: 4 }}>Click the tab to wake</div>
+          </div>
+        </div>
+      )}
+
       <webview
         ref={(el) => {
           wvRef.current = el
@@ -109,7 +134,7 @@ export default function TabWebView({ tab, active, onUpdate, onNewTab, onNavigate
         allowpopups="true"
         style={{
           flex: 1,
-          display: tab.isNewTab ? 'none' : 'flex',
+          display: (tab.isNewTab || tab.sleeping) ? 'none' : 'flex',
         }}
       />
     </div>

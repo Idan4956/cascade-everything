@@ -1,5 +1,16 @@
 import React, { useState, useMemo } from 'react'
 
+const SOCIAL_APPS = [
+  { id: 'whatsapp', name: 'WhatsApp', url: 'https://web.whatsapp.com', color: '#25d366', icon: 'W' },
+  { id: 'telegram', name: 'Telegram', url: 'https://web.telegram.org', color: '#2aabee', icon: 'T' },
+  { id: 'discord', name: 'Discord', url: 'https://discord.com/app', color: '#5865f2', icon: 'D' },
+  { id: 'messenger', name: 'Messenger', url: 'https://www.messenger.com', color: '#0084ff', icon: 'M' },
+  { id: 'slack', name: 'Slack', url: 'https://app.slack.com', color: '#e01e5a', icon: 'S' },
+  { id: 'reddit', name: 'Reddit', url: 'https://www.reddit.com', color: '#ff4500', icon: 'R' },
+  { id: 'twitter', name: 'X / Twitter', url: 'https://x.com', color: '#fff', icon: 'X' },
+  { id: 'instagram', name: 'Instagram', url: 'https://www.instagram.com', color: '#e1306c', icon: 'Ig' },
+]
+
 function formatTime(ts) {
   const d = new Date(ts)
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -280,6 +291,7 @@ export default function SidePanel({
   const [bmSearch, setBmSearch] = useState('')
   const [activeTags, setActiveTags] = useState([])
   const [histSearch, setHistSearch] = useState('')
+  const [socialApp, setSocialApp] = useState(SOCIAL_APPS[0].id)
 
   const allTags = useMemo(() => {
     const tags = new Set()
@@ -316,7 +328,7 @@ export default function SidePanel({
 
   return (
     <div style={{
-      width: 280,
+      width: view === 'social' ? 360 : 280,
       flexShrink: 0,
       display: 'flex',
       flexDirection: 'column',
@@ -341,6 +353,11 @@ export default function SidePanel({
               strokeLinecap="round" strokeLinejoin="round">
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
             </svg>
+          ) : view === 'social' ? (
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+              stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
           ) : (
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
               stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -348,7 +365,7 @@ export default function SidePanel({
             </svg>
           )}
           <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
-            {view === 'bookmarks' ? 'Bookmarks' : 'History'}
+            {view === 'bookmarks' ? 'Bookmarks' : view === 'social' ? 'Messengers' : 'History'}
           </span>
         </div>
 
@@ -399,96 +416,140 @@ export default function SidePanel({
         </button>
       </div>
 
-      {/* Search */}
-      <div style={{ padding: '9px 12px', flexShrink: 0, borderBottom: '1px solid var(--border)' }}>
-        <div style={{ position: 'relative' }}>
-          <svg
-            style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
-            width="12" height="12" viewBox="0 0 24 24" fill="none"
-            stroke="var(--muted)" strokeWidth="2" strokeLinecap="round">
-            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          <input
-            value={view === 'bookmarks' ? bmSearch : histSearch}
-            onChange={e => view === 'bookmarks' ? setBmSearch(e.target.value) : setHistSearch(e.target.value)}
-            placeholder={`Search ${view}…`}
-            style={{
-              width: '100%',
-              padding: '6px 9px 6px 28px',
-              background: 'var(--surface2)',
-              border: '1px solid var(--border)',
-              borderRadius: 8,
-              color: 'var(--text)',
-              fontSize: 12,
-              outline: 'none',
-              userSelect: 'text',
-              boxSizing: 'border-box',
-              transition: 'border-color 0.15s',
-            }}
-            onFocus={e => { e.target.style.borderColor = 'rgba(59,130,246,0.4)' }}
-            onBlur={e => { e.target.style.borderColor = 'var(--border)' }}
+      {/* Social panel */}
+      {view === 'social' && (
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+          {/* App switcher row */}
+          <div style={{
+            display: 'flex', gap: 6, padding: '10px 12px',
+            flexShrink: 0, borderBottom: '1px solid var(--border)',
+            flexWrap: 'wrap',
+          }}>
+            {SOCIAL_APPS.map(app => (
+              <button
+                key={app.id}
+                onClick={() => setSocialApp(app.id)}
+                title={app.name}
+                style={{
+                  width: 32, height: 32, borderRadius: 8,
+                  border: socialApp === app.id ? `2px solid ${app.color}` : '2px solid transparent',
+                  background: socialApp === app.id ? `${app.color}22` : 'rgba(255,255,255,0.06)',
+                  color: socialApp === app.id ? app.color : 'var(--muted)',
+                  fontSize: app.icon.length > 1 ? 9 : 11,
+                  fontWeight: 700, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'all 0.15s',
+                  flexShrink: 0,
+                }}
+              >
+                {app.icon}
+              </button>
+            ))}
+          </div>
+          {/* Webview */}
+          <webview
+            src={SOCIAL_APPS.find(a => a.id === socialApp)?.url}
+            partition="persist:social"
+            allowpopups="true"
+            style={{ flex: 1, width: '100%', minHeight: 0 }}
           />
-        </div>
-      </div>
-
-      {/* Tag chips — bookmarks only */}
-      {view === 'bookmarks' && allTags.length > 0 && (
-        <div style={{
-          padding: '8px 12px 8px',
-          flexShrink: 0,
-          display: 'flex',
-          gap: 6,
-          flexWrap: 'wrap',
-          borderBottom: '1px solid var(--border)',
-        }}>
-          <TagChip tag="All" active={activeTags.length === 0} onClick={() => setActiveTags([])} />
-          {allTags.map(t => (
-            <TagChip key={t} tag={t} active={activeTags.includes(t)} onClick={() => toggleTag(t)} />
-          ))}
         </div>
       )}
 
-      {/* List */}
-      <div style={{ flex: 1, overflowY: 'auto' }}>
-        {view === 'bookmarks' ? (
-          filteredBookmarks.length === 0 ? (
-            <Empty text={bookmarks.length === 0 ? 'No bookmarks yet' : 'No matches'} isBookmarks />
-          ) : (
-            filteredBookmarks.map(bm => (
-              <BookmarkItem
-                key={bm.url}
-                bm={bm}
-                onNavigate={onNavigate}
-                onNewTab={onNewTab}
-                onUpdate={onBookmarkUpdate}
-                onRemove={onBookmarkRemove}
+      {/* Search + tags + list — bookmarks & history only */}
+      {view !== 'social' && (
+        <>
+          <div style={{ padding: '9px 12px', flexShrink: 0, borderBottom: '1px solid var(--border)' }}>
+            <div style={{ position: 'relative' }}>
+              <svg
+                style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
+                width="12" height="12" viewBox="0 0 24 24" fill="none"
+                stroke="var(--muted)" strokeWidth="2" strokeLinecap="round">
+                <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                value={view === 'bookmarks' ? bmSearch : histSearch}
+                onChange={e => view === 'bookmarks' ? setBmSearch(e.target.value) : setHistSearch(e.target.value)}
+                placeholder={`Search ${view}…`}
+                style={{
+                  width: '100%',
+                  padding: '6px 9px 6px 28px',
+                  background: 'var(--surface2)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 8,
+                  color: 'var(--text)',
+                  fontSize: 12,
+                  outline: 'none',
+                  userSelect: 'text',
+                  boxSizing: 'border-box',
+                  transition: 'border-color 0.15s',
+                }}
+                onFocus={e => { e.target.style.borderColor = 'rgba(59,130,246,0.4)' }}
+                onBlur={e => { e.target.style.borderColor = 'var(--border)' }}
               />
-            ))
-          )
-        ) : (
-          groupedHistory.length === 0 ? (
-            <Empty text={history.length === 0 ? 'No history yet' : 'No matches'} />
-          ) : (
-            groupedHistory.map(([date, items]) => (
-              <div key={date}>
-                <div style={{
-                  padding: '8px 14px 4px',
-                  fontSize: 10,
-                  fontWeight: 600,
-                  color: 'var(--muted)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.6px',
-                }}>
-                  {date}
-                </div>
-                {items.map((item, i) => (
-                  <HistoryItem key={i} item={item} onNavigate={onNavigate} onNewTab={onNewTab} />
-                ))}
-              </div>
-            ))
-          )
-        )}
-      </div>
+            </div>
+          </div>
+
+          {/* Tag chips — bookmarks only */}
+          {view === 'bookmarks' && allTags.length > 0 && (
+            <div style={{
+              padding: '8px 12px 8px',
+              flexShrink: 0,
+              display: 'flex',
+              gap: 6,
+              flexWrap: 'wrap',
+              borderBottom: '1px solid var(--border)',
+            }}>
+              <TagChip tag="All" active={activeTags.length === 0} onClick={() => setActiveTags([])} />
+              {allTags.map(t => (
+                <TagChip key={t} tag={t} active={activeTags.includes(t)} onClick={() => toggleTag(t)} />
+              ))}
+            </div>
+          )}
+
+          {/* List */}
+          <div style={{ flex: 1, overflowY: 'auto' }}>
+            {view === 'bookmarks' ? (
+              filteredBookmarks.length === 0 ? (
+                <Empty text={bookmarks.length === 0 ? 'No bookmarks yet' : 'No matches'} isBookmarks />
+              ) : (
+                filteredBookmarks.map(bm => (
+                  <BookmarkItem
+                    key={bm.url}
+                    bm={bm}
+                    onNavigate={onNavigate}
+                    onNewTab={onNewTab}
+                    onUpdate={onBookmarkUpdate}
+                    onRemove={onBookmarkRemove}
+                  />
+                ))
+              )
+            ) : (
+              groupedHistory.length === 0 ? (
+                <Empty text={history.length === 0 ? 'No history yet' : 'No matches'} />
+              ) : (
+                groupedHistory.map(([date, items]) => (
+                  <div key={date}>
+                    <div style={{
+                      padding: '8px 14px 4px',
+                      fontSize: 10,
+                      fontWeight: 600,
+                      color: 'var(--muted)',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.6px',
+                    }}>
+                      {date}
+                    </div>
+                    {items.map((item, i) => (
+                      <HistoryItem key={i} item={item} onNavigate={onNavigate} onNewTab={onNewTab} />
+                    ))}
+                  </div>
+                ))
+              )
+            )}
+          </div>
+        </>
+      )}
     </div>
   )
 }
