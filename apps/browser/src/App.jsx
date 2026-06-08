@@ -111,9 +111,34 @@ export default function App() {
   const wcIdsRef = useRef({})
   const settingsRef = useRef(settings)
   const activeWorkspaceIdRef = useRef('ws_1')
+  const tabActivityRef = useRef({})
+  const sleepTimerRef = useRef(null)
 
   useEffect(() => { settingsRef.current = settings }, [settings])
   useEffect(() => { activeWorkspaceIdRef.current = activeWorkspaceId }, [activeWorkspaceId])
+
+  // Track tab activity for sleep
+  useEffect(() => {
+    tabActivityRef.current[activeTabId] = Date.now()
+    // Wake a sleeping tab when selected
+    setTabs(prev => prev.map(t =>
+      t.id === activeTabId && t.sleeping ? { ...t, sleeping: false } : t
+    ))
+  }, [activeTabId])
+
+  useEffect(() => {
+    const SLEEP_MS = 20 * 60 * 1000 // 20 minutes
+    sleepTimerRef.current = setInterval(() => {
+      const now = Date.now()
+      setTabs(prev => prev.map(t => {
+        if (t.id === activeTabId || t.isNewTab || t.sleeping || !t.displayUrl) return t
+        const lastActive = tabActivityRef.current[t.id] || 0
+        if (now - lastActive > SLEEP_MS) return { ...t, sleeping: true }
+        return t
+      }))
+    }, 60 * 1000)
+    return () => clearInterval(sleepTimerRef.current)
+  }, [activeTabId])
 
   useEffect(() => {
     window.browserAPI?.getBookmarks().then(setBookmarks)
