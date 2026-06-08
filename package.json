@@ -14,7 +14,7 @@
     "build:browser": "npm -w apps/browser run build"
   },
   "devDependencies": {
-    "electron": "33.2.1",
+    "electron": "^33.2.1",
     "electron-builder": "25.1.8"
   }
 }
