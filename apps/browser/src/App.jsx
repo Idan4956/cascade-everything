@@ -516,18 +516,19 @@ export default function App() {
   }, [activeTabId, readerMode])
 
   const handleSaveSession = useCallback((name) => {
+    const wsTabs = tabs.filter(t => t.workspaceId === activeWorkspaceIdRef.current)
     const snap = {
       id: `sess_${Date.now()}`,
       name: name || `Session — ${new Date().toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`,
       created: Date.now(),
-      tabs: workspaceTabs.filter(t => t.displayUrl).map(t => ({ url: t.displayUrl, title: t.title, favicon: t.favicon })),
+      tabs: wsTabs.filter(t => t.displayUrl).map(t => ({ url: t.displayUrl, title: t.title, favicon: t.favicon })),
     }
     setSessions(prev => {
       const next = [snap, ...prev].slice(0, 25)
       localStorage.setItem('cascade-sessions', JSON.stringify(next))
       return next
     })
-  }, [workspaceTabs])
+  }, [tabs])
 
   const handleRestoreSession = useCallback((session) => {
     session.tabs.forEach(t => handleNewTab(t.url))
