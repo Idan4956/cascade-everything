@@ -284,14 +284,77 @@ function SidePanelInput({ value, onChange, placeholder, autoFocus }) {
   )
 }
 
+function SessionCard({ session, onRestore, onDelete }) {
+  const [hov, setHov] = useState(false)
+  return (
+    <div
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        padding: '12px 14px',
+        borderRadius: 10,
+        background: hov ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.03)',
+        border: '1px solid var(--border)',
+        marginBottom: 8,
+        transition: 'background 0.1s',
+        cursor: 'default',
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{session.name}</div>
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
+            {new Date(session.created).toLocaleDateString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})} · {session.tabs.length} tab{session.tabs.length !== 1 ? 's' : ''}
+          </div>
+        </div>
+        <button onClick={onDelete} style={{
+          width: 20, height: 20, borderRadius: 5, border: 'none',
+          background: 'rgba(239,68,68,0.12)', color: '#ef4444',
+          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          opacity: hov ? 1 : 0, transition: 'opacity 0.1s', flexShrink: 0,
+        }}>
+          <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><line x1="1" y1="1" x2="7" y2="7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><line x1="7" y1="1" x2="1" y2="7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+        </button>
+      </div>
+      {/* Favicons */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: hov ? 8 : 0, flexWrap: 'wrap' }}>
+        {session.tabs.slice(0, 6).map((t, i) => (
+          <div key={i} style={{ width: 16, height: 16, borderRadius: 3, background: 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+            {t.favicon ? (
+              <img src={t.favicon} width={12} height={12} style={{ borderRadius: 2 }} onError={e => e.target.style.display='none'} />
+            ) : (
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2"><circle cx="12" cy="12" r="9"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>
+            )}
+          </div>
+        ))}
+        {session.tabs.length > 6 && <span style={{ fontSize: 10, color: 'var(--muted)', alignSelf: 'center' }}>+{session.tabs.length - 6}</span>}
+      </div>
+      {hov && (
+        <button onClick={onRestore} style={{
+          width: '100%', padding: '6px 0', borderRadius: 7, border: 'none',
+          background: 'var(--accent)', color: '#fff',
+          fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+          transition: 'filter 0.1s',
+        }}
+        onMouseEnter={e => e.currentTarget.style.filter='brightness(1.1)'}
+        onMouseLeave={e => e.currentTarget.style.filter=''}
+        >Restore all tabs</button>
+      )}
+    </div>
+  )
+}
+
 export default function SidePanel({
   view, bookmarks, history, onNavigate, onNewTab,
   onBookmarkUpdate, onBookmarkRemove, onClearHistory, onClose,
+  sessions, onSaveSession, onRestoreSession, onDeleteSession,
 }) {
   const [bmSearch, setBmSearch] = useState('')
   const [activeTags, setActiveTags] = useState([])
   const [histSearch, setHistSearch] = useState('')
   const [socialApp, setSocialApp] = useState(SOCIAL_APPS[0].id)
+  const [saving, setSaving] = useState(false)
+  const [saveName, setSaveName] = useState('')
 
   const allTags = useMemo(() => {
     const tags = new Set()
@@ -328,7 +391,7 @@ export default function SidePanel({
 
   return (
     <div style={{
-      width: view === 'social' ? 360 : 280,
+      width: view === 'social' ? 360 : view === 'sessions' ? 300 : 280,
       flexShrink: 0,
       display: 'flex',
       flexDirection: 'column',
@@ -358,6 +421,11 @@ export default function SidePanel({
               stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
             </svg>
+          ) : view === 'sessions' ? (
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+              stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="3" width="20" height="4" rx="1"/><rect x="2" y="10" width="20" height="4" rx="1"/><rect x="2" y="17" width="20" height="4" rx="1"/>
+            </svg>
           ) : (
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
               stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -365,7 +433,7 @@ export default function SidePanel({
             </svg>
           )}
           <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
-            {view === 'bookmarks' ? 'Bookmarks' : view === 'social' ? 'Messengers' : 'History'}
+            {view === 'bookmarks' ? 'Bookmarks' : view === 'social' ? 'Messengers' : view === 'sessions' ? 'Sessions' : 'History'}
           </span>
         </div>
 
@@ -390,6 +458,32 @@ export default function SidePanel({
           >
             Clear
           </button>
+        )}
+
+        {view === 'sessions' && (
+          saving ? (
+            <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
+              <input
+                autoFocus
+                value={saveName}
+                onChange={e => setSaveName(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') { onSaveSession(saveName); setSaving(false); setSaveName('') }
+                  if (e.key === 'Escape') { setSaving(false); setSaveName('') }
+                }}
+                placeholder="Session name…"
+                style={{ width: 120, height: 24, borderRadius: 6, border: '1px solid var(--border-mid)', background: 'var(--surface3)', color: 'var(--text)', fontSize: 11, padding: '0 8px', outline: 'none', userSelect: 'text' }}
+              />
+              <button onClick={() => { onSaveSession(saveName); setSaving(false); setSaveName('') }}
+                style={{ height: 24, padding: '0 8px', borderRadius: 6, border: 'none', background: 'var(--accent)', color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>Save</button>
+            </div>
+          ) : (
+            <button onClick={() => setSaving(true)} title="Save current tabs as session"
+              style={{ height: 26, padding: '0 10px', borderRadius: 7, border: '1px solid var(--border-mid)', background: 'rgba(255,255,255,0.06)', color: 'var(--text)', fontSize: 11, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              Save session
+            </button>
+          )
         )}
 
         {/* Close */}
@@ -456,8 +550,38 @@ export default function SidePanel({
         </div>
       )}
 
+      {/* Sessions panel */}
+      {view === 'sessions' && (
+        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 12px' }}>
+          {(!sessions || sessions.length === 0) ? (
+            <div style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              justifyContent: 'center', height: 160, gap: 10,
+            }}>
+              <div style={{ opacity: 0.2 }}>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="3" width="20" height="4" rx="1"/><rect x="2" y="10" width="20" height="4" rx="1"/><rect x="2" y="17" width="20" height="4" rx="1"/>
+                </svg>
+              </div>
+              <span style={{ fontSize: 12, color: 'var(--muted)', textAlign: 'center', lineHeight: 1.5 }}>
+                No saved sessions. Click the save button to snapshot your current tabs.
+              </span>
+            </div>
+          ) : (
+            sessions.map(s => (
+              <SessionCard
+                key={s.id}
+                session={s}
+                onRestore={() => onRestoreSession(s)}
+                onDelete={() => onDeleteSession(s.id)}
+              />
+            ))
+          )}
+        </div>
+      )}
+
       {/* Search + tags + list — bookmarks & history only */}
-      {view !== 'social' && (
+      {view !== 'social' && view !== 'sessions' && (
         <>
           <div style={{ padding: '9px 12px', flexShrink: 0, borderBottom: '1px solid var(--border)' }}>
             <div style={{ position: 'relative' }}>

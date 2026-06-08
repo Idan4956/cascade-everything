@@ -62,11 +62,18 @@ export default function NewTabPage({ onNavigate, onOpenSettings, background }) {
   const [query, setQuery] = useState('')
   const [time, setTime] = useState(formatClock)
   const [dateStr] = useState(formatDateStr)
+  const [bookmarks, setBookmarks] = useState([])
 
   useEffect(() => {
     const tick = () => setTime(formatClock())
     const id = setInterval(tick, 1000)
     return () => clearInterval(id)
+  }, [])
+
+  useEffect(() => {
+    window.browserAPI?.getBookmarks?.().then(bm => {
+      if (bm?.length) setBookmarks(bm.slice(0, 8))
+    }).catch(() => {})
   }, [])
 
   const handleSearch = (e) => {
@@ -199,6 +206,40 @@ export default function NewTabPage({ onNavigate, onOpenSettings, background }) {
             <QuickLink key={site.url} site={site} onNavigate={onNavigate} />
           ))}
         </div>
+
+        {/* Bookmarks speed dial */}
+        {bookmarks.length > 0 && (
+          <div style={{ width: '100%', marginTop: 28 }}>
+            <div style={{ fontSize: 10.5, fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 12, textAlign: 'center' }}>
+              Bookmarks
+            </div>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+              {bookmarks.map((bm, i) => (
+                <button key={i} onClick={() => onNavigate(bm.url)} title={bm.title || bm.url}
+                  style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+                    padding: '10px 12px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.07)',
+                    background: 'rgba(255,255,255,0.04)', cursor: 'pointer', width: 72,
+                    transition: 'background 0.15s, border-color 0.15s',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.09)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)' }}
+                >
+                  <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                    {bm.favicon ? (
+                      <img src={bm.favicon} width={18} height={18} style={{ borderRadius: 3 }} onError={e => e.target.style.display='none'} />
+                    ) : (
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2"><circle cx="12" cy="12" r="9"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>
+                    )}
+                  </div>
+                  <span style={{ fontSize: 10, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%', textAlign: 'center' }}>
+                    {(bm.title || bm.url).slice(0, 10)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
